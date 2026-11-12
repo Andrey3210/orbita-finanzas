@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, forecastStart, events, defaultDates, project } from './model.js';
-import { icon } from './icons.js';
-import { createNavigation } from './navigation.js';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, forecastStart, events, defaultDates, project } from './model.js?v=rediseno-2';
+import { icon } from './icons.js?v=rediseno-2';
+import { createNavigation } from './navigation.js?v=rediseno-2';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'lilac'], ['cuentas', 'Cuentas', 'wallet', 'mint'], ['explorar', 'Explorar', 'compass', 'gold'],
@@ -47,7 +47,7 @@ window.addEventListener('resize', () => {
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = (modifier = '') => `<img class="mascot ${modifier}" src="./assets/zorro.webp" width="512" height="512" alt="" draggable="false">`;
+const mascot = (modifier = '') => `<img class="mascot ${modifier}" src="./assets/zorro.webp?v=rediseno-2" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
   const report = monthlyReport(state.month);

@@ -4,7 +4,7 @@ import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
-const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
+const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 const port = Number(process.argv[2] ?? 4176);
 createServer(async (req, res) => {
   try {
@@ -19,4 +19,4 @@ createServer(async (req, res) => {
   } catch {
     res.writeHead(404).end();
   }
-}).listen(port, '127.0.0.1', () => console.log('Órbita: http://127.0.0.1:' + port + '/'));
+}).listen(port, '127.0.0.1', () => console.log('foxio: http://127.0.0.1:' + port + '/'));

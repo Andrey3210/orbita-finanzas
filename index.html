@@ -3,30 +3,64 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#161324">
-  <meta name="description" content="Explora tus finanzas del mes, entiende tus gastos y simula cambios con Órbita.">
-  <title>Órbita · Tus finanzas</title>
-  <link rel="icon" type="image/svg+xml" href="./assets/mark.svg">
+  <meta name="theme-color" content="#340c04">
+  <meta name="description" content="Explora tus finanzas del mes, entiende tus gastos y simula cambios con foxio.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="foxio">
+  <link rel="manifest" href="./manifest.webmanifest?v=foxio-1">
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/foxio-180.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/foxio-192.png">
+  <title>foxio · Finanzas personales</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./assets/style.css?v=rediseno-2">
-  <link rel="stylesheet" href="./assets/layout.css?v=rediseno-2">
+  <link rel="stylesheet" href="./assets/style.css?v=foxio-1">
+  <link rel="stylesheet" href="./assets/layout.css?v=foxio-1">
 </head>
 <body>
   <a class="skip" href="#content">Saltar al contenido</a>
   <aside class="shell-nav" aria-label="Barra principal">
-    <a class="brand" href="#inicio"><img src="./assets/mark.svg" alt="" width="38" height="38"><span>órbita</span></a>
+    <a class="brand" href="#inicio"><img src="./assets/foxio-192.png" alt="" width="38" height="38"><span>foxio</span></a>
     <nav id="nav" aria-label="Secciones principales"><i id="nav-indicator" aria-hidden="true"></i></nav>
   </aside>
   <div class="workspace">
     <header class="top">
-      <a class="brand mobile-brand" href="#inicio"><img src="./assets/mark.svg" alt="" width="31" height="31"><span>órbita</span></a>
-      <span class="demo-label"><i></i> <span>Datos de muestra</span></span>
+      <a class="brand mobile-brand" href="#inicio"><img src="./assets/foxio-192.png" alt="" width="31" height="31"><span>foxio</span></a>
+      <div class="top-actions">
+        <span class="demo-label"><i></i> <span>Datos de muestra</span></span>
+        <button class="install-button" id="install-app" type="button" aria-haspopup="dialog">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v11m-4-4 4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
+          Instalar
+        </button>
+      </div>
     </header>
     <main id="content" tabindex="-1"></main>
   </div>
   <dialog id="movement-dialog" aria-labelledby="movement-title"></dialog>
-  <script type="module" src="./assets/app.js?v=rediseno-2"></script>
+  <dialog id="install-dialog" aria-labelledby="install-title">
+    <div class="dialog-head">
+      <img src="./assets/foxio-192.png" width="43" height="43" alt="">
+      <form method="dialog"><button class="subtle-button icon-button" aria-label="Cerrar instrucciones de instalación">×</button></form>
+    </div>
+    <h2 id="install-title">Instalar foxio</h2>
+    <section data-platform="ios">
+      <h3>iPhone</h3>
+      <ol>
+        <li>Abre esta página en Safari y toca <b>Compartir</b>.</li>
+        <li>Selecciona <b>Agregar a pantalla de inicio</b>.</li>
+        <li>Si aparece <b>Abrir como app web</b>, actívalo y toca <b>Agregar</b>.</li>
+      </ol>
+    </section>
+    <section data-platform="android">
+      <h3>Android</h3>
+      <ol>
+        <li>Abre esta página en Chrome.</li>
+        <li>Abre el menú y toca <b>Instalar y crear acceso directo</b> o <b>Añadir a pantalla de inicio</b>. Luego toca <b>Instalar</b>.</li>
+      </ol>
+    </section>
+  </dialog>
+  <script type="module" src="./assets/pwa.js?v=foxio-1"></script>
+  <script type="module" src="./assets/app.js?v=foxio-1"></script>
 </body>
 </html>

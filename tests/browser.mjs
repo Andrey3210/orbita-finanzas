@@ -7,6 +7,13 @@ const browser = await chromium.launch({ args: ['--disable-gpu'] });
 const errors = [];
 const observe = page => page.on('pageerror', err => errors.push(err.message));
 const assertText = async (locator, expected) => assert.match(await locator.innerText(), expected);
+const waitForMascot = (page, section) => page.waitForFunction(
+  name => {
+    const mascot = document.querySelector('.mascot-' + name);
+    return mascot?.complete && mascot.naturalWidth === 512;
+  },
+  section,
+);
 
 try {
   await mkdir('test-results', { recursive: true });
@@ -15,7 +22,7 @@ try {
   await mobile.goto(base, { waitUntil: 'networkidle' });
   await mobile.screenshot({ path: 'test-results/inicio-movil.png', fullPage: true, animations: 'disabled' });
   await assertText(mobile.locator('.hero-balance'), /10,425\.35/);
-  assert.ok(await mobile.locator('.mascot').evaluate(img => img.complete && img.naturalWidth > 0));
+  await waitForMascot(mobile, 'inicio');
   await mobile.getByText('Ver resumen completo').tap();
   await assertText(mobile.locator('.report-body'), /Saldo inicial[\s\S]*S\/ 10,643\.50[\s\S]*Transferencias propias[\s\S]*S\/ 1,000\.00[\s\S]*Gastos por categoría[\s\S]*Frente a septiembre/);
   await mobile.getByText('Ver resumen completo').tap();
@@ -25,22 +32,24 @@ try {
   await assertText(mobile.getByRole('dialog'), /1,150\.00/);
   await mobile.getByRole('button', { name: 'Cerrar detalle' }).tap();
   await mobile.getByRole('button', { name: 'Comparar este día' }).tap();
+  await waitForMascot(mobile, 'explorar');
   await assertText(mobile.locator('.compare-detail'), /951\.00[\s\S]*840\.00/);
   await mobile.locator('[data-action="pick-compare"][data-value="20"]').tap();
   await assertText(mobile.locator('.compare-detail'), /DÍA 20/);
   await mobile.getByRole('combobox', { name: 'Día para comparar' }).selectOption('31');
   await assertText(mobile.locator('.compare-detail'), /Sin día equivalente/);
   await mobile.getByRole('link', { name: 'Simular', exact: true }).tap();
+  await waitForMascot(mobile, 'simular');
   const orig = await mobile.locator('#original-line').getAttribute('d');
   const baseline = await mobile.locator('#forecast-line').getAttribute('d');
   for (let i = 0; i < 3; i++) await mobile.getByRole('button', { name: 'Retrasar un día' }).tap();
   await assertText(mobile.locator('#sim-notice'), /6 de noviembre[\s\S]*340\.00/);
   assert.equal(await mobile.locator('#original-line').getAttribute('d'), orig);
-  assert.notEqual(await mobile.locator('#forecast-line').getAttribute('d'), baseline);
+  await mobile.waitForFunction(d => document.querySelector('#forecast-line').getAttribute('d') !== d, baseline);
   await mobile.screenshot({ path: 'test-results/simulacion-movil.png', fullPage: true, animations: 'disabled' });
   await mobile.getByRole('button', { name: 'Restablecer' }).tap();
   await assertText(mobile.locator('#sim-notice'), /Sin faltantes/);
-  assert.equal(await mobile.locator('#forecast-line').getAttribute('d'), baseline);
+  await mobile.waitForFunction(d => document.querySelector('#forecast-line').getAttribute('d') === d, baseline);
   await mobile.locator('[data-event="cobro"]').scrollIntoViewIfNeeded();
   const mobileTrack = await mobile.locator('#event-timeline').boundingBox();
   const mobileHandle = await mobile.locator('[data-event="cobro"]').boundingBox();
@@ -55,10 +64,12 @@ try {
   await cdp.detach();
   await mobile.getByRole('link', { name: 'Cuentas', exact: true }).tap();
   await mobile.getByRole('heading', { name: 'Tus cuentas', exact: true }).waitFor({ timeout: 4000 });
+  await waitForMascot(mobile, 'cuentas');
   await mobile.getByRole('button', { name: /Ahorro mensual/ }).tap();
   await assertText(mobile.getByRole('dialog'), /Cuenta principal[\s\S]*Ahorros[\s\S]*Transferencias/);
   await mobile.getByRole('button', { name: 'Cerrar detalle' }).tap();
   await mobile.getByRole('link', { name: 'Actividad', exact: true }).tap();
+  await waitForMascot(mobile, 'actividad');
   await mobile.getByRole('combobox', { name: 'Filtrar por cuenta' }).selectOption('ahorros');
   await mobile.getByRole('combobox', { name: 'Filtrar por tipo' }).selectOption('transfer');
   await mobile.getByRole('searchbox', { name: 'Buscar movimientos' }).fill('ahorro');
@@ -120,8 +131,23 @@ try {
   await desktop.emulateMedia({ reducedMotion: 'reduce' });
   await desktop.getByRole('link', { name: 'Explorar', exact: true }).click();
   assert.equal(await desktop.locator('animateMotion').count(), 0);
+
+  // Verify the browser can install the manifest and the controlled app survives
+  // an offline reload, including a mascot that wasn't loaded in the initial view.
+  await desktop.waitForFunction(() => Boolean(navigator.serviceWorker.controller), undefined, { timeout: 12000 });
+  const installCheck = await desktop.context().newCDPSession(desktop);
+  const manifest = await installCheck.send('Page.getAppManifest');
+  assert.equal(JSON.parse(manifest.data).name, 'foxio');
+  assert.deepEqual((await installCheck.send('Page.getInstallabilityErrors')).installabilityErrors, []);
+  await desktop.context().setOffline(true);
+  await desktop.reload();
+  await desktop.getByRole('link', { name: 'Actividad', exact: true }).click();
+  await waitForMascot(desktop, 'actividad');
+  await assertText(desktop.locator('#activity-results'), /movimientos/);
+  await desktop.context().setOffline(false);
+
   assert.deepEqual(errors, []);
-  console.log('Navegador: recorrido móvil, detalle, comparación, arrastre, filtros y movimiento reducido correctos.');
+  console.log('Navegador: recorrido móvil, cinco poses, arrastre, movimiento reducido, instalación y reapertura sin conexión verificados.');
 } finally {
   await browser.close();
 }

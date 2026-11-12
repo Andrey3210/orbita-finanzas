@@ -1,4 +1,4 @@
-# Órbita · Observatorio financiero
+# foxio · Finanzas personales
 
 Prototipo web en español para explorar cuentas, gastos, ingresos y transferencias ficticias en soles. Incluye datos de septiembre y octubre de 2026 y un escenario independiente para noviembre. No necesita un servidor de aplicaciones ni credenciales.
 
@@ -12,6 +12,10 @@ En Inicio, abre **Ver resumen completo** para consultar los saldos por cuenta, e
 4. En **Simular**, arrastra el marcador de **Cobro · Proyecto Atlas** del día 4 al 7, o usa **Retrasar un día** tres veces. El primer faltante es **S/ 340.00 el 6 de noviembre**. Usa **Restablecer** para volver al plan original.
 
 En **Explorar → Flujo de dinero**, elige una ruta desde el diagrama o desde el selector para ver su total y sus movimientos. En **Cuentas**, las transferencias propias salen de una cuenta y entran en otra; no se cuentan como ingreso ni gasto. En **Actividad**, puedes combinar mes, cuenta, tipo y búsqueda.
+
+## Instalar en el teléfono
+
+Abre foxio y toca **Instalar**. En iPhone, usa Safari y elige **Compartir → Agregar a pantalla de inicio**. Activa **Abrir como app web** si aparece. En Android, Chrome puede mostrar el aviso de instalación. También puedes abrir el menú de Chrome y elegir **Instalar y crear acceso directo → Instalar**. Abre la app una vez con conexión para que guarde los datos de demostración y las pantallas.
 
 ## Desarrollo
 

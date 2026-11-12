@@ -3,6 +3,11 @@
   --ease: cubic-bezier(.22,.75,.25,1);
   --snap: cubic-bezier(.19,1.26,.39,1);
   --soft-line: #723818;
+  --tile: #42180d;
+  --tile-border: #70391f;
+  --tile-radius: 23px;
+  --tile-padding: 21px;
+  --tile-gap: 15px;
 }
 .tone-apricot { --accent: #ffb166; --shade: #b95922; --wash: #61230f; }
 .tone-honey { --accent: #ffca97; --shade: #a65023; --wash: #5c2a15; }
@@ -101,6 +106,7 @@
   100% { transform: none; }
 }
 
+.home-main { display: grid; min-width: 0; gap: var(--tile-gap); }
 .hero {
   position: relative; isolation: isolate; display: flex; align-items: center; overflow: hidden;
   min-height: 204px; padding: 25px 27px; border-radius: 25px; color: #340c04;
@@ -140,9 +146,12 @@
 }
 @keyframes spark-in { from { opacity: 0; transform: scale(.1) rotate(-25deg); } }
 
-.metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin: 19px 0 22px; }
-.metric { display: flex; align-items: center; gap: 9px; min-width: 0; }
-.metric:not(:first-child) { padding-left: 10px; border-left: 1px solid var(--soft-line); }
+.metrics, .forecast-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: var(--tile-gap); }
+.metric {
+  display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 73px;
+  padding: 12px 15px; border: 1px solid var(--tile-border); border-radius: var(--tile-radius);
+  background: var(--tile);
+}
 .metric-icon {
   display: grid; place-items: center; width: 35px; height: 35px; flex: none;
   background: var(--wash); color: var(--accent); border-radius: 11px;
@@ -152,10 +161,14 @@
 .metric div > span { display: block; color: var(--muted); font-size: 11px; font-weight: 600; }
 .metric strong { display: block; margin-top: 1px; font: 700 clamp(15px, 1.7vw, 25px)/1.1 var(--heading); letter-spacing: -.045em; white-space: nowrap; }
 
-.spending-panel { border-top: 1px solid var(--soft-line); padding-top: 16px; }
+.spending-panel, .day-panel, .block, .account-grid, .financial-report {
+  min-width: 0; border: 1px solid var(--tile-border); border-radius: var(--tile-radius);
+  padding: var(--tile-padding); background: var(--tile);
+}
+.spending-panel { background: #461b0e; }
 .spending-body {
   display: grid; grid-template-columns: minmax(0, 192px) minmax(0, 215px);
-  justify-content: center; align-items: center; gap: clamp(11px,5vw,52px);
+  justify-content: center; align-items: center; gap: clamp(10px,2vw,22px);
   margin: 11px auto 6px;
 }
 .donut { position: relative; aspect-ratio: 1; }
@@ -182,7 +195,7 @@
 .spending-key-row strong { color: var(--muted); font-size: 11px; font-weight: 700; }
 .spending-key-row:hover, .spending-key-row[aria-pressed="true"] { background: #58220f; }
 .spending-key-row[aria-pressed="true"] span { font-weight: 700; }
-.financial-report { border-block: 1px solid var(--soft-line); margin-top: 20px; }
+.financial-report { padding-block: 0; }
 .financial-report summary {
   display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 50px;
   list-style: none; cursor: pointer; touch-action: manipulation; font-size: 13px; font-weight: 800; color: #ffb166;
@@ -208,8 +221,8 @@
 @keyframes spend-in { from { transform: scaleX(0); } }
 
 .panel { min-width: 0; }
-.block, .day-panel { margin-top: 19px; padding-top: 14px; border-top: 1px solid var(--soft-line); }
-.home-chart { margin-top: 22px; }
+.block, .day-panel { margin-top: var(--tile-gap); }
+.home-chart { margin-top: 0; }
 .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .panel-head h2 { font-size: clamp(20px, 2.45vw, 28px); letter-spacing: -.046em; }
 .panel-head p { color: var(--muted); font-size: 12px; margin-top: 5px; }
@@ -227,18 +240,18 @@
 .view-tabs button[aria-pressed="true"] {
   background: #ffb166; color: #340c04; border-color: #ffb166; box-shadow: 0 2px #c04116;
 }
-.account-grid { margin-top: 9px; }
+.account-grid { padding-block: 0; }
 .account-row {
   width: 100%; display: grid; grid-template-columns: auto 1fr auto auto; align-items: center;
   gap: 10px; border: 0; border-bottom: 1px solid var(--soft-line); min-height: 69px;
   background: none; text-align: left; color: var(--text); padding: 7px 2px;
 }
 .account-row:hover, .movement:hover { background: #501b0a; }
+.account-row:last-child { border-bottom: 0; }
 .account-row .movement-icon { width: 42px; height: 42px; border-radius: 13px; }
 .account-row small { display: block; color: var(--muted); margin-top: 2px; }
 .account-row > strong { font: 700 clamp(14px, 2.2vw, 20px) var(--heading); white-space: nowrap; }
 .account-row > svg { color: var(--quiet); }
-.activity-panel { border-top: 0; padding-top: 0; }
 .activity-panel .search-wrap { max-width: 510px; }
 .activity-filters summary {
   display: flex; align-items: center; gap: 5px; width: fit-content; min-height: 44px;
@@ -248,7 +261,6 @@
 .activity-filters summary svg { transition: transform .2s var(--ease); }
 .activity-filters[open] summary svg { transform: rotate(180deg); }
 .activity-filters .filter-row { margin: 0 0 10px; }
-.forecast-metrics { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 .forecast-figure { grid-template-columns: 43px minmax(0,1fr); }
 .forecast-figure .y-labels span { position: absolute; right: 0; transform: translateY(-50%); }
 .forecast-area { fill: #ffb16624; }
@@ -259,20 +271,30 @@
 dialog[open] { animation: sheet-in .29s var(--ease) both; }
 @keyframes sheet-in { from { opacity: 0; transform: translateY(20px) scale(.98); } }
 
+@media (min-width: 1100px) {
+  .home-main {
+    grid-template-columns: minmax(0, 1.27fr) minmax(0, 1fr);
+    grid-template-areas: "balance categories" "metrics categories" "days days" "report report";
+  }
+  .home-main .hero { grid-area: balance; }
+  .home-main .metrics { grid-area: metrics; }
+  .home-main .spending-panel { grid-area: categories; display: flex; flex-direction: column; }
+  .home-main .spending-body { margin: auto 0; }
+  .home-main .home-chart { grid-area: days; }
+  .home-main .financial-report { grid-area: report; }
+}
 @media (min-width: 761px) and (max-width: 1040px) {
   :root { --sidebar: 164px; }
   .shell-nav { padding-inline: 10px; }
   .workspace { padding-inline: 24px; }
   .hero { min-height: 165px; padding: 19px 15px; }
   .hero-balance strong { font-size: clamp(29px, 4vw, 43px); }
-  .metrics { gap: 7px; }
-  .metric { gap: 4px; }
-  .metric:not(:first-child) { padding-left: 6px; }
   .metric-icon { width: 25px; height: 25px; border-radius: 8px; }
   .metric-icon svg { width: 14px; }
 }
 
 @media (max-width: 760px) {
+  :root { --tile-radius: 19px; --tile-padding: 12px; --tile-gap: 11px; }
   html { scroll-padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
   body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
   .workspace { margin: 0; padding: 0 clamp(14px,4.35vw,32px) 25px; }
@@ -325,18 +347,14 @@ dialog[open] { animation: sheet-in .29s var(--ease) both; }
   .hero-spark.second { left: 6%; bottom: 12%; }
   .hero-spark svg { width: 14px; }
   .mascot { width: 98%; max-width: 124px; }
-  .metrics { gap: 8px; margin: 13px 0 17px; }
-  .metric { gap: 4px; }
-  .metric:not(:first-child) { padding-left: 6px; }
+  .metric { gap: 7px; min-height: 56px; padding: 8px; }
   .metric-icon { width: 23px; height: 24px; border-radius: 7px; }
   .metric-icon svg { width: 13px; height: 13px; }
   .metric div > span { font-size: 11px; }
   .metric strong { font-size: clamp(15px,4vw,20px); }
-  .spending-body { grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 10px; max-width: 390px; }
+  .spending-body { grid-template-columns: minmax(0,1fr) minmax(0,1.03fr); gap: 9px; max-width: 380px; }
   .financial-report summary { min-height: 45px; font-size: 12px; }
   .report-body { grid-template-columns: 1fr; gap: 13px; }
-  .block, .day-panel { margin-top: 14px; padding-top: 11px; }
-  .home-chart { margin-top: 20px; }
   .bar-figure { --plot-height: 140px; --day-width: 48px; grid-template-columns: 26px minmax(0,1fr); gap: 4px; }
   .y-labels, .x-tick, .line-days span { font-size: 9px; }
   .x-tick { font-size: 11px; }
@@ -360,7 +378,7 @@ dialog[open] { animation: sheet-in .29s var(--ease) both; }
   .section-heading .select-wrap select { padding-inline: 7px 20px; }
   .section-heading .select-wrap > svg:first-of-type { display: none; }
   .metric-icon { display: none; }
-  .metric:not(:first-child) { padding-left: 7px; }
+  .spending-key-row { padding-inline: 3px; gap: 5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #nav.nav-ready #nav-indicator { transition: none; }

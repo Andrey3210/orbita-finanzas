@@ -96,13 +96,11 @@ export function monthlyReport(month) {
   const closing = portfolio(month);
   const outflows = entries.filter(m => m.kind === 'expense');
   const byCategory = groups(outflows);
-  const amountsByDay = daily(month);
-  const peak = Math.max(...amountsByDay);
   const earlier = Object.keys(months).filter(key => key < month).sort().at(-1);
   return {
     ...figures, net, opening: closing - net, closing, accountBalances: balances(month),
     entries: entries.length, byCategory, largestExpense: [...outflows].sort((a, b) => b.cents - a.cents)[0],
-    peak, peakDay: amountsByDay.indexOf(peak) + 1, earlier, prior: earlier ? totals(earlier) : null,
+    earlier, prior: earlier ? totals(earlier) : null,
   };
 }
 export function compareDay(a, b, day, kind = 'expense') {
@@ -119,22 +117,41 @@ export function routes(month) {
     .map(g => ({ ...g, account: a.id, id: a.id + '-' + g.category })));
 }
 
-// Noviembre: flujo previsto de la cuenta de pagos. No altera el historial.
-export const forecastStart = 81000;
-export const events = [
-  { id: 'cobro', label: 'Cobro · Proyecto Atlas', day: 4, cents: 160000 },
-  { id: 'alquiler', label: 'Pago · Alquiler', day: 6, cents: -115000 },
-  { id: 'servicios', label: 'Pago · Servicios', day: 9, cents: -26500 },
-  { id: 'mercado', label: 'Pago · Supermercado', day: 13, cents: -31000 },
-  { id: 'sueldo', label: 'Cobro · Estudio Boreal', day: 19, cents: 220000 },
-  { id: 'cuota', label: 'Pago · Cuota del equipo', day: 24, cents: -48500 },
-];
-export const defaultDates = () => Object.fromEntries(events.map(e => [e.id, e.day]));
-export function project(dates = defaultDates()) {
-  let balance = forecastStart;
-  return Array.from({ length: 30 }, (_, i) => {
-    const day = i + 1;
-    balance += events.filter(e => dates[e.id] === day).reduce((n, e) => n + e.cents, 0);
-    return { day, balance };
+export function predictNextMonth(through = latest) {
+  const history = Object.keys(months).filter(month => month <= through).sort().slice(-2);
+  if (!history.length) return null;
+  const lastMonth = history.at(-1);
+  const [year, month] = lastMonth.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month, 1));
+  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const opening = portfolio(lastMonth);
+  const schedule = Array.from({ length: days }, () => ({ income: 0, expense: 0 }));
+  const totalWeight = history.length + 1;
+
+  for (const key of history) {
+    const weight = key === lastMonth ? 2 : 1;
+    for (const movement of monthMovements(key)) {
+      if (movement.kind === 'transfer') continue;
+      const index = Math.min(movement.day, days) - 1;
+      schedule[index][movement.kind] += movement.cents * weight;
+    }
+  }
+
+  // Round accumulated totals so the last point agrees with the monthly amounts.
+  let weightedIncome = 0, weightedExpense = 0;
+  const series = [{ day: 0, balance: opening }];
+  schedule.forEach(({ income, expense }, index) => {
+    weightedIncome += income;
+    weightedExpense += expense;
+    series.push({
+      day: index + 1,
+      balance: opening + Math.round(weightedIncome / totalWeight) - Math.round(weightedExpense / totalWeight),
+    });
   });
+  const closing = series.at(-1).balance;
+  return {
+    date, history, opening, closing, net: closing - opening, series,
+    income: Math.round(weightedIncome / totalWeight), expense: Math.round(weightedExpense / totalWeight),
+    shortfall: series.find(point => point.balance < 0),
+  };
 }

@@ -1,4 +1,4 @@
-const version = 'foxio-2';
+const version = 'foxio-3';
 const root = new URL(self.registration.scope);
 const cachePrefix = 'foxio-app:' + root.pathname + ':';
 const cacheName = cachePrefix + version;
@@ -6,7 +6,7 @@ const offlinePage = new URL('./?v=' + version, root);
 const shell = [
   offlinePage.href,
   ...['style.css', 'layout.css', 'app.js', 'pwa.js', 'model.js', 'icons.js', 'navigation.js',
-    'zorro-inicio.webp', 'zorro-cuentas.webp', 'zorro-explorar.webp', 'zorro-simular.webp', 'zorro-actividad.webp'
+    'zorro-inicio.webp', 'zorro-cuentas.webp', 'zorro-explorar.webp', 'zorro-pronostico.webp', 'zorro-actividad.webp'
   ].map(file => './assets/' + file + '?v=' + version),
   './manifest.webmanifest',
   './assets/foxio-180.png', './assets/foxio-192.png', './assets/foxio-512.png', './assets/foxio-maskable.png',

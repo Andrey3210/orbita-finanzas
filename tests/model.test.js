@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { accounts, balances, byDay, compareDay, defaultDates, daily, groups, latest, monthMovements, portfolio, previous, project, routes, sum, totals } from '../assets/model.js';
+import { accounts, balances, byDay, compareDay, daily, groups, latest, monthMovements, portfolio, previous, predictNextMonth, routes, sum, totals } from '../assets/model.js';
 
 test('el pico de octubre conserva el total y permite identificar el alquiler', () => {
   const values = daily(latest);
@@ -32,9 +32,27 @@ test('una transferencia debita un origen y abona un destino sin afectar la carte
   assert.equal(sum(routes(latest)), t.expense);
 });
 
-test('mover el cobro avisa el primer faltante exacto y no cambia el plan original', () => {
-  const moved = project({ ...defaultDates(), cobro: 7 });
-  assert.deepEqual(moved.find(p => p.balance < 0), { day: 6, balance: -34000 });
-  assert.equal(project().some(p => p.balance < 0), false);
-  assert.equal(moved.at(-1).balance, project().at(-1).balance);
+test('el pronóstico usa el saldo de octubre y pondera el historial sin contar transferencias', () => {
+  const report = predictNextMonth();
+  assert.deepEqual(report.history, [previous, latest]);
+  assert.equal(report.date.toISOString().slice(0, 10), '2026-11-01');
+  assert.equal(report.opening, portfolio(latest));
+  const estimate = kind => Math.round((totals(previous)[kind] + 2 * totals(latest)[kind]) / 3);
+  assert.equal(report.income, estimate('income'));
+  assert.equal(report.expense, estimate('expense'));
+  assert.equal(report.closing, report.opening + report.income - report.expense);
+  assert.deepEqual(report.series.at(-1), { day: 30, balance: 1077775 });
+  // October 31 is folded into the last day of November, which has 30 days.
+  const end = sum([...byDay(latest, 30), ...byDay(latest, 31)]);
+  const expected = Math.round((sum(byDay(previous, 30)) + 2 * end) / 3);
+  const lastChange = report.series.at(-2).balance - report.series.at(-1).balance;
+  assert.ok(Math.abs(lastChange - expected) <= 1);
+});
+
+test('con un solo mes usa ese historial completo y con ninguno no inventa un saldo', () => {
+  const report = predictNextMonth(previous);
+  assert.equal(report.series.at(-1).day, 31);
+  assert.equal(report.income, totals(previous).income);
+  assert.equal(report.expense, totals(previous).expense);
+  assert.equal(predictNextMonth('2026-08'), null);
 });

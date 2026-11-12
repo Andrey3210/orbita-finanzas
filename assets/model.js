@@ -89,6 +89,22 @@ export function groups(list) {
     return { category, items, cents: sum(items) };
   }).sort((a, b) => b.cents - a.cents);
 }
+export function monthlyReport(month) {
+  const entries = monthMovements(month);
+  const figures = totals(month);
+  const net = figures.income - figures.expense;
+  const closing = portfolio(month);
+  const outflows = entries.filter(m => m.kind === 'expense');
+  const byCategory = groups(outflows);
+  const amountsByDay = daily(month);
+  const peak = Math.max(...amountsByDay);
+  const earlier = Object.keys(months).filter(key => key < month).sort().at(-1);
+  return {
+    ...figures, net, opening: closing - net, closing, accountBalances: balances(month),
+    entries: entries.length, byCategory, largestExpense: [...outflows].sort((a, b) => b.cents - a.cents)[0],
+    peak, peakDay: amountsByDay.indexOf(peak) + 1, earlier, prior: earlier ? totals(earlier) : null,
+  };
+}
 export function compareDay(a, b, day, kind = 'expense') {
   if (day > months[a].days || day > months[b].days) return null;
   const left = byDay(a, day, kind);

@@ -1,15 +1,16 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, totals, balances, portfolio, daily, groups, compareDay, routes, forecastStart, events, defaultDates, project } from './model.js';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, forecastStart, events, defaultDates, project } from './model.js';
 import { icon } from './icons.js';
+import { createNavigation } from './navigation.js';
 
 const sections = [
-  ['inicio', 'Inicio', 'home'], ['cuentas', 'Cuentas', 'wallet'], ['explorar', 'Explorar', 'compass'],
-  ['simular', 'Simular', 'flask'], ['actividad', 'Actividad', 'pulse'],
+  ['inicio', 'Inicio', 'home', 'lilac'], ['cuentas', 'Cuentas', 'wallet', 'mint'], ['explorar', 'Explorar', 'compass', 'gold'],
+  ['simular', 'Simular', 'flask', 'sky'], ['actividad', 'Actividad', 'pulse', 'pink'],
 ];
 const getSection = () => sections.some(s => '#' + s[0] === location.hash) ? location.hash.slice(1) : 'inicio';
 const state = {
   section: getSection(), month: latest, day: 15, kind: 'expense', opened: false, category: null,
   tab: 'days', compare: previous, selectedRoute: null, dates: defaultDates(), event: 'cobro',
-  filter: { account: '', kind: '', search: '' }, steps: new Set(),
+  filter: { account: '', kind: '', search: '' }, steps: new Set(), reportOpen: false,
 };
 let lastCompareKey = '';
 const main = document.querySelector('#content');
@@ -27,91 +28,99 @@ const option = (value, label, selected) => `<option value="${value}" ${value ===
 const action = (id, value = '') => `data-action="${id}" data-value="${value}"`;
 const select = (label, id, items, selected, extra = '') => `<label class="select-wrap ${extra}"><span class="sr-only">${label}</span>${icon(id.includes('month') ? 'calendar' : 'layers', 15)}<select data-change="${id}">${items.map(([v, l]) => option(v, l, selected)).join('')}</select>${icon('chevronDown', 13)}</label>`;
 const monthItems = Object.keys(months).reverse().map(m => [m, monthName(m) + ' 2026']);
-const heading = (label, title, desc, extra = '') => `<div class="section-heading"><div><p class="eyebrow">${label}</p><h1>${title}</h1><p>${desc}</p></div>${extra}</div>`;
+const heading = (title, extra = '') => {
+  const [, , glyph, color] = sections.find(s => s[0] === state.section);
+  return `<header class="section-heading"><div class="section-title"><span class="section-figure tone-${color}">${icon(glyph, 29)}</span><h1>${title}</h1></div>${extra}</header>`;
+};
 const badgeIcon = (glyph, color = 'violet') => `<span class="badge-icon ${color}">${icon(glyph, 19)}</span>`;
-const metricIcon = (glyph, color) => `<span class="metric-icon ${color}">${icon(glyph, 17)}</span>`;
-const prefix = (n, t = 0) => n < t ? '−' : '+';
-const change = (a, b) => b ? (a - b) / b * 100 : null;
-const pct = n => n === null ? '—' : prefix(n) + num(Math.abs(n), 1) + '%';
 const plotScale = kind => {
   const max = Math.max(...Object.keys(months).flatMap(m => daily(m, kind))) / 100;
   const step = max > 2000 ? 1500 : max > 800 ? 400 : 200;
   return Math.ceil(max / (step * 4)) * step * 4 * 100;
 };
 
-nav.insertAdjacentHTML('beforeend', sections.map(([id, label, glyph]) => `<a class="nav-link" href="#${id}" data-nav="${id}"><span class="nav-glyph">${icon(glyph, 21)}</span><span>${label}</span></a>`).join(''));
-document.querySelector('#demo-icon').innerHTML = icon('flask', 16);
-
-function navPosition() {
-  const links = [...nav.querySelectorAll('[data-nav]')];
-  const selected = links.find(a => a.dataset.nav === state.section);
-  for (const a of links) a === selected ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current');
-  const indicator = document.querySelector('#nav-indicator');
-  const target = matchMedia('(max-width: 760px)').matches ? selected.querySelector('.nav-glyph') : selected;
-  const a = target.getBoundingClientRect(), b = nav.getBoundingClientRect();
-  indicator.style.transform = `translate(${a.left - b.left}px, ${a.top - b.top}px)`;
-  indicator.style.width = a.width + 'px';
-  indicator.style.height = a.height + 'px';
-  document.querySelector('#crumb-label').textContent = selected.textContent.trim().toUpperCase();
-  document.querySelector('#period-label').innerHTML = icon('calendar', 15) + '<span>' + (state.section === 'simular' ? 'Noviembre' : monthName(state.month)) + ' 2026</span>';
-}
+nav.insertAdjacentHTML('beforeend', sections.map(([id, label, glyph, color]) => `<a class="nav-link tone-${color}" href="#${id}" data-nav="${id}" draggable="false"><span class="nav-glyph">${icon(glyph, 22)}</span><span>${label}</span></a>`).join(''));
+const navigation = createNavigation(nav, main, state.section, navigate);
 window.addEventListener('resize', () => {
-  navPosition();
   if (state.section === 'simular') updateSim();
 });
 
-const metric = (title, value, glyph, color, note, tone = '') => `<article class="metric">
-  <div class="metric-top">${metricIcon(glyph, color)}<span>${title}</span></div>
-  <strong class="${tone}">${value}</strong><small>${note}</small></article>`;
+const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
+  <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
+const mascot = (modifier = '') => `<img class="mascot ${modifier}" src="./assets/zorro.webp" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
-  const t = totals(state.month), old = state.month === latest ? totals(previous) : null;
-  const net = t.income - t.expense;
-  return `<section class="hero">
-    <div class="hero-copy"><p class="eyebrow"><i></i> ESTACIÓN FINANCIERA</p>
-      <h1>Hola, explorador<span>.</span></h1><p>Descubre qué mueve tu dinero.</p>
-      <div class="hero-balance"><span>SALDO TOTAL</span><div><strong>${money(portfolio(state.month))}</strong><span class="net-pill ${negative(net)}">${icon(net < 0 ? 'trendDown' : 'trend', 14)} ${signed(net)}</span></div></div>
-    </div><div class="hero-art-label"><i></i> ÓRBITA 01 <span>·</span> EN LÍNEA</div>
-  </section>
-  <section class="metrics" aria-label="Resumen del mes">
-    ${metric('Ingresos del mes', money(t.income), 'arrowDown', 'teal', old ? `<b class="positive">${pct(change(t.income, old.income))}</b> vs. septiembre` : 'Total del período')}
-    ${metric('Gastos del mes', money(t.expense), 'arrowUp', 'rose', old ? `<b class="negative">${pct(change(t.expense, old.expense))}</b> vs. septiembre` : 'Total del período')}
-    ${metric('Balance del mes', signed(net), 'pulse', 'violet', 'Ingresos menos gastos', negative(net))}
-  </section>
-  <div class="home-grid"><div>${dayPanel(true)}</div><div class="home-side">${mission()}${signal()}</div></div>`;
+  const report = monthlyReport(state.month);
+  return `${heading('Tu resumen', select('Mes del resumen', 'month', monthItems, state.month))}
+  <div class="home-grid"><div class="home-main">
+    <section class="hero" aria-label="Saldo total">
+      <div class="hero-balance"><span>Saldo total</span><strong>${money(report.closing)}</strong><span class="hero-footnote">En ${accounts.length} cuentas</span></div>
+      <div class="hero-illustration"><i class="hero-orbit"></i><i class="hero-spark first">${icon('spark', 22)}</i><i class="hero-spark second">${icon('spark', 16)}</i>${mascot()}</div>
+    </section>
+    <section class="metrics" aria-label="Resumen del mes">
+      ${metric('Ingresos', money(report.income), 'arrowDown', 'mint')}
+      ${metric('Gastos', money(report.expense), 'arrowUp', 'pink')}
+      ${metric('Balance', signed(report.net), report.net < 0 ? 'trendDown' : 'trend', 'lilac', negative(report.net))}
+    </section>
+    ${financialDetails(report)}
+    ${dayPanel(true)}
+  </div><aside class="home-side">${mission()}${signal(report)}</aside></div>`;
+}
+
+function financialDetails(report) {
+  const row = (label, value, tone = '') => `<div><dt>${label}</dt><dd class="${tone}">${value}</dd></div>`;
+  const delta = (label, cents) => row(label, signed(cents));
+  const monthDiff = report.prior
+    ? `<dl>${delta('Ingresos', report.income - report.prior.income)}${delta('Gastos', report.expense - report.prior.expense)}${delta('Balance', report.net - (report.prior.income - report.prior.expense))}</dl>`
+    : '<p class="empty">Es el primer mes de la demo.</p>';
+  return `<details class="financial-report" ${state.reportOpen ? 'open' : ''}>
+    <summary><span>${icon('bars', 19)} Ver resumen completo</span>${icon('chevronDown', 18)}</summary>
+    <div class="report-body">
+      <section><h2>Flujo del mes</h2><dl>
+        ${row('Saldo inicial', money(report.opening))}${row('Ingresos', money(report.income))}${row('Gastos', '−' + money(report.expense))}
+        ${row('Balance', signed(report.net), negative(report.net))}${row('Saldo final', money(report.closing))}${row('Transferencias propias', money(report.transfer))}${row('Movimientos', report.entries)}
+      </dl></section>
+      <section><h2>Saldos por cuenta</h2><dl>${accounts.map(a => row(a.label, signed(report.accountBalances[a.id]).replace(/^\+/, ''))).join('')}</dl></section>
+      <section><h2>Gastos por categoría</h2><dl class="spend-categories">${report.byCategory.map(group => {
+        const category = categories[group.category];
+        const share = group.cents / report.expense * 100;
+        return `<div><dt>${category.label}</dt><dd>${money(group.cents)}</dd><i style="--share:${share}%;--tint:${category.color}" aria-hidden="true"></i></div>`;
+      }).join('')}</dl></section>
+      <section><h2>${report.earlier ? 'Frente a ' + monthName(report.earlier).toLowerCase() : 'Comparación mensual'}</h2>${monthDiff}</section>
+      ${report.largestExpense ? `<section class="report-highlight"><h2>Mayor gasto individual</h2>${movementList([report.largestExpense])}</section>` : ''}
+    </div></details>`;
 }
 
 function mission() {
   const steps = [
-    ['cuentas', 'wallet', 'Revisa tu saldo', 'Ubica tus cuentas.', 'violet'],
-    ['explorar', 'bars', 'Descubre qué cambió', 'Investiga un pico del mes.', 'teal'],
-    ['simular', 'flask', 'Prueba un escenario', 'Ensaya un cambio de fecha.', 'blue'],
+    ['cuentas', 'wallet', 'Revisa tu saldo', 'mint'],
+    ['explorar', 'bars', 'Descubre qué cambió', 'gold'],
+    ['simular', 'flask', 'Prueba un escenario', 'sky'],
   ];
-  return `<section class="panel mission"><p class="eyebrow">${icon('spark', 14)} GUÍA OPCIONAL</p><h2>Ruta de exploración</h2>
-    <p>Tres paradas para conocer tu dinero.</p>
-    <ol>${steps.map(([id, glyph, label, desc, color]) => `<li><button ${action('step', id)}>${badgeIcon(state.steps.has(id) ? 'check' : glyph, color)}<span><strong>${label}</strong><small>${desc}</small></span>${icon('chevron', 15)}</button></li>`).join('')}</ol>
-    <div class="mission-progress"><span>${state.steps.size} de 3 exploradas</span><div aria-hidden="true">${steps.map((_, i) => `<i class="${i < state.steps.size ? 'done' : ''}"></i>`).join('')}</div></div></section>`;
+  return `<section class="mission"><div class="mission-head"><h2>Tu ruta</h2><span aria-label="${state.steps.size} de 3 pasos visitados">${state.steps.size}/3</span></div>
+    <ol>${steps.map(([id, glyph, label, color]) => `<li><button class="tone-${color}" ${action('step', id)}><span class="route-node">${icon(state.steps.has(id) ? 'check' : glyph, 25)}</span><strong>${label}</strong></button></li>`).join('')}</ol></section>`;
 }
 
-function signal() {
-  const day = daily(state.month).indexOf(Math.max(...daily(state.month))) + 1;
-  return `<section class="panel signal"><div>${badgeIcon('spark', 'teal')}<span class="eyebrow">SEÑAL DETECTADA</span></div><p>El <strong>${dateText(state.month, day)}</strong> registró el mayor gasto del mes.</p><button class="link-button" ${action('signal', day)}>Investigar señal ${icon('arrowRight', 15)}</button></section>`;
+function signal(report) {
+  return `<button class="signal" ${action('signal', report.peakDay)}>
+    <span class="signal-icon tone-pink">${icon('bolt', 23)}</span><span><strong>Día de mayor gasto</strong><small>${report.peakDay} ${months[state.month].short} · ${money(report.peak)}</small></span>${icon('chevron', 16)}</button>`;
 }
 
 function dayPanel(isHome = false) {
-  const values = daily(state.month, state.kind);
-  const scale = plotScale(state.kind);
+  const kind = isHome ? 'expense' : state.kind;
+  const values = daily(state.month, kind);
+  const scale = plotScale(kind);
   const topDay = values.indexOf(Math.max(...values)) + 1;
   const day = Math.min(state.day, values.length);
-  const list = byDay(state.month, day, state.kind);
+  const list = byDay(state.month, day, kind);
   const breakdown = groups(list);
   const total = sum(list);
   const guides = [1, .75, .5, .25, 0];
   const labelDays = state.month === latest ? [1, 5, 10, 15, 20, 25, 31] : [1, 5, 10, 15, 20, 25, 30];
-  return `<section class="panel day-panel" aria-labelledby="day-title">
-    <div class="panel-head"><div><p class="eyebrow">${icon('bars', 14)} MAPA DE ACTIVIDAD</p><h2 id="day-title">Paisaje del mes</h2><p>Toca una columna para ver qué hay dentro.</p></div>${select('Mes del gráfico', 'month', monthItems, state.month)}</div>
-    <div class="chart-toolbar"><div class="segmented" aria-label="Datos del gráfico">
-      ${['expense', 'income', 'transfer'].map(k => `<button ${action('kind', k)} aria-pressed="${state.kind === k}">${kindName[k]}</button>`).join('')}</div><span class="plot-unit">PEN / DÍA</span></div>
+  return `<section class="panel day-panel ${isHome ? 'home-chart' : ''}" aria-labelledby="day-title">
+    <div class="panel-head"><h2 id="day-title">${isHome ? 'Gastos por día' : 'Movimientos por día'}</h2>${isHome ? '<span class="plot-unit">PEN</span>' : select('Mes del gráfico', 'month', monthItems, state.month)}</div>
+    ${isHome ? '' : `<div class="chart-toolbar"><div class="segmented" aria-label="Datos del gráfico">
+      ${['expense', 'income', 'transfer'].map(k => `<button ${action('kind', k)} aria-pressed="${kind === k}">${kindName[k]}</button>`).join('')}</div><span class="plot-unit">PEN / DÍA</span></div>`}
     <div class="bar-figure ${state.opened ? 'drilling' : ''}">
       <div class="y-labels" aria-hidden="true">${guides.map(g => `<span>${num(scale * g / 100)}</span>`).join('')}</div>
       <div class="bar-plot" style="--days:${values.length}">
@@ -133,7 +142,7 @@ function dayPanel(isHome = false) {
       <div class="detail-head"><div><p class="eyebrow">DÍA ${String(day).padStart(2, '0')} / ${monthName(state.month).toUpperCase()}</p><h3>${money(total)}</h3></div><button class="subtle-button" ${action('compare-day') }>${icon('layers', 15)} Comparar este día</button></div>
       ${breakdown.length ? `<div class="category-grid">${breakdown.map(g => `<button class="category-tile" style="--tint:${categories[g.category].color}" ${action('category', g.category)} aria-pressed="${state.category === g.category}"><i></i><span>${categories[g.category].label}</span><strong>${money(g.cents)}</strong>${icon('chevron', 14)}</button>`).join('')}</div>` : '<p class="empty">No hay movimientos de este tipo en este día.</p>'}
       ${state.category && breakdown.some(g => g.category === state.category) ? `<div class="unfold" id="segment-detail"><p class="eyebrow">${categories[state.category].label} / MOVIMIENTOS</p>${movementList(breakdown.find(g => g.category === state.category).items)}</div>` : ''}
-    </div>` : `<div class="chart-foot"><span><i></i> ${kindName[state.kind]} diarios</span><button class="link-button" ${action(isHome ? 'explore' : 'compare-day') }>${isHome ? 'Ir a Explorar' : 'Comparar meses'} ${icon('arrowRight', 15)}</button></div>`}
+    </div>` : `<div class="chart-foot"><span>Toca una barra para ver el detalle</span><button class="link-button" ${action(isHome ? 'explore' : 'compare-day') }>${isHome ? 'Explorar' : 'Comparar meses'} ${icon('arrowRight', 15)}</button></div>`}
   </section>`;
 }
 
@@ -143,16 +152,15 @@ function movementList(items) {
 
 function accountsView() {
   const b = balances(state.month);
-  return heading('01 / CARTERA', 'Tus cuentas', 'El dinero cambia de órbita cuando lo mueves entre tus cuentas.', select('Mes de las cuentas', 'month', monthItems, state.month))
-    + `<div class="wallet-total panel"><div>${badgeIcon('wallet')}<p class="eyebrow">SALDO CONSOLIDADO</p><h2>${money(portfolio(state.month))}</h2></div><span>Al cierre de ${monthName(state.month).toLowerCase()} · PEN</span></div>
-    <div class="account-grid">${accounts.map(a => `<article class="panel account-card" style="--tint:${a.color}">
-      <span class="movement-icon">${icon(a.icon, 21)}</span><p class="eyebrow">•••• ${a.suffix}</p><h2>${a.label}</h2><strong>${signed(b[a.id]).replace(/^\+/, '')}</strong>
-      <button class="link-button" ${action('account', a.id)}>Ver movimientos ${icon('arrowRight', 15)}</button></article>`).join('')}</div>
-    <section class="panel block"><div class="panel-head"><div><p class="eyebrow">${icon('transfer', 14)} ÓRBITAS INTERNAS</p><h2>Entre tus cuentas</h2><p>Estas transferencias cambian el saldo de cada cuenta. Tus ingresos y gastos siguen iguales.</p></div></div>${movementList(monthMovements(state.month).filter(m => m.kind === 'transfer'))}</section>`;
+  return heading('Tus cuentas', select('Mes de las cuentas', 'month', monthItems, state.month))
+    + `<div class="wallet-total"><div><p>Saldo total</p><h2>${money(portfolio(state.month))}</h2></div><span class="section-figure tone-mint">${icon('vault', 34)}</span></div>
+    <div class="account-grid">${accounts.map(a => `<button class="account-row" style="--tint:${a.color}" ${action('account', a.id)} aria-label="Ver movimientos de ${a.label}">
+      <span class="movement-icon">${icon(a.icon, 23)}</span><span><strong>${a.label}</strong><small>•••• ${a.suffix}</small></span><strong>${signed(b[a.id]).replace(/^\+/, '')}</strong>${icon('chevron', 16)}</button>`).join('')}</div>
+    <section class="panel block"><div class="panel-head"><h2>Entre tus cuentas</h2></div>${movementList(monthMovements(state.month).filter(m => m.kind === 'transfer'))}</section>`;
 }
 
 function explore() {
-  return heading('02 / EXPLORACIÓN', 'Explorar', 'Acércate a un día, superpón dos meses o sigue el recorrido de tu dinero.')
+  return heading('Explorar')
     + `<div class="view-tabs" aria-label="Vistas de exploración">${[['days', 'bars', 'Por día'], ['compare', 'layers', 'Comparar meses'], ['flow', 'flow', 'Flujo de dinero']].map(([id, glyph, label]) => `<button ${action('tab', id)} aria-pressed="${state.tab === id}">${icon(glyph, 17)} ${label}</button>`).join('')}</div>`
     + (state.tab === 'days' ? dayPanel() : state.tab === 'compare' ? comparePanel() : flowPanel());
 }
@@ -176,7 +184,7 @@ function comparePanel() {
   const reveal = lastCompareKey !== key;
   lastCompareKey = key;
   return `<section class="panel block compare-panel">
-    <div class="panel-head"><div><p class="eyebrow">${icon('layers', 14)} SUPERPOSICIÓN</p><h2>Dos meses, una escala</h2><p>Arrastra un mes sobre el otro o elige ambos con los controles.</p></div>${select('Tipo de movimiento', 'compare-kind', Object.entries(kindName), state.kind)}</div>
+    <div class="panel-head"><h2>Dos meses, una escala</h2>${select('Tipo de movimiento', 'compare-kind', Object.entries(kindName), state.kind)}</div>
     <div class="compare-controls">
       ${[['base-month', state.month, 'Mes base'], ['other-month', state.compare, 'Mes de referencia']].map(([id, m, label], i) => `<div class="compare-control ${i ? 'ref' : 'base'}" data-month-target><span class="drag-chip" title="Arrastrar ${monthName(m)}" data-month-drag="${i}" aria-hidden="true">⋮⋮</span>${select(label, id, choices, m)}</div>`).join('')}
       <button class="subtle-button swap" ${action('swap')} aria-label="Intercambiar meses">${icon('transfer', 16)} <span>Intercambiar</span></button>
@@ -222,7 +230,7 @@ function flowPanel() {
       return [r.id, center];
     }));
   };
-  return `<section class="panel block flow-panel"><div class="panel-head"><div><p class="eyebrow">${icon('flow', 14)} MAPA DE FLUJOS</p><h2>Sigue el dinero</h2><p>El ancho de cada ruta muestra cuánto salió de una cuenta hacia una categoría.</p></div>${select('Mes del flujo', 'month', monthItems, state.month)}</div>
+  return `<section class="panel block flow-panel"><div class="panel-head"><h2>Sigue el dinero</h2>${select('Mes del flujo', 'month', monthItems, state.month)}</div>
     <div class="flow-captions"><span>CUENTAS DE ORIGEN</span><span>CATEGORÍAS DE DESTINO</span></div>
     <div class="flow-figure">
       <div class="flow-nodes from">${sources.map(a => `<div style="${nodeStyle(sources.map(s => s.id), 'account', a.id, a.color)}"><span>${a.short}</span><i></i></div>`).join('')}</div>
@@ -253,8 +261,8 @@ const original = project();
 const shortEvent = e => e.label.split(' · ')[0] + ' de ' + e.label.split(' · ')[1];
 function simView() {
   const scale = [simMax, 350000, 175000, 0, simMin];
-  return heading('03 / LABORATORIO', 'Simular', 'Cambia la fecha de un cobro o pago y observa el efecto en tu saldo.', `<span class="lab-pill">${icon('flask', 15)} SIMULACIÓN</span>`)
-    + `<section class="panel block sim-panel"><div class="panel-head"><div><p class="eyebrow">${icon('pulse', 14)} PROYECCIÓN DE NOVIEMBRE</p><h2>Línea de tiempo</h2><p>Escenario independiente · Saldo inicial de la cuenta de pagos: ${money(forecastStart)}.</p></div><button class="subtle-button" ${action('reset')}>${icon('reset', 15)} Restablecer</button></div>
+  return heading('Simular', '<span class="lab-pill">Simulación</span>')
+    + `<section class="panel block sim-panel"><div class="panel-head"><div><h2>Noviembre</h2><p>Saldo inicial de la cuenta de pagos: ${money(forecastStart)}</p></div><button class="subtle-button" ${action('reset')}>${icon('reset', 15)} Restablecer</button></div>
     <div class="compare-key"><span><i></i>Simulación</span><span class="reference"><i></i>Plan original</span><span class="plot-unit">SALDO / PEN</span></div>
     <div class="line-figure sim-figure"><div class="y-labels" aria-hidden="true">${scale.map(n => `<span style="top:${simY(n) / 220 * 100}%">${n < 0 ? '−' : ''}${num(Math.abs(n) / 100)}</span>`).join('')}</div>
       <div class="line-plot">
@@ -274,7 +282,7 @@ function simView() {
       <div><p class="eyebrow">FECHA EN NOVIEMBRE</p><div class="date-controls"><button class="subtle-button icon-button" ${action('nudge', -1)} aria-label="Adelantar un día">${icon('minus', 17)}</button>
       ${select('Día de noviembre', 'sim-day', Array.from({length: 30}, (_, i) => [String(i + 1), String(i + 1) + ' nov']), String(state.dates[state.event]))}
       <button class="subtle-button icon-button" ${action('nudge', 1)} aria-label="Retrasar un día">${icon('plus', 17)}</button></div></div></div>
-    <p class="sim-hint">Arrastra un marcador sobre la línea de tiempo o cambia su día con los controles. Tu historial se mantiene intacto.</p>
+    <p class="sim-hint">Arrastra un marcador o cambia su fecha.</p>
     </section>`;
 }
 
@@ -337,8 +345,8 @@ function activityResults() {
   return `<p class="result-count" role="status">${list.length} ${list.length === 1 ? 'movimiento' : 'movimientos'}</p>${movementList(list)}`;
 }
 function activity() {
-  return heading('04 / REGISTRO', 'Actividad', 'Encuentra el movimiento que hizo cambiar tus cifras.', select('Mes de actividad', 'month', monthItems, state.month))
-    + `<section class="panel block"><div class="panel-head"><div><p class="eyebrow">${icon('pulse', 14)} REGISTRO DEL MES</p><h2>Movimientos</h2></div></div>
+  return heading('Actividad', select('Mes de actividad', 'month', monthItems, state.month))
+    + `<section class="panel block activity-panel">
     <div class="filter-row"><label class="search-wrap">${icon('search', 17)}<span class="sr-only">Buscar movimientos</span><input type="search" id="activity-search" placeholder="Buscar un movimiento"></label>
     ${select('Filtrar por cuenta', 'filter-account', [['', 'Todas las cuentas'], ...accounts.map(a => [a.id, a.label])], state.filter.account)}
     ${select('Filtrar por tipo', 'filter-kind', [['', 'Todos los tipos'], ...Object.entries(kindName)], state.filter.kind)}</div>
@@ -346,15 +354,19 @@ function activity() {
 }
 
 const views = { inicio: home, cuentas: accountsView, explorar: explore, simular: simView, actividad: activity };
+let pageTransition;
 function render({ focus, direction = 0 } = {}) {
-  navPosition();
   if (state.section !== 'explorar' || state.tab !== 'compare') lastCompareKey = '';
+  pageTransition?.cancel();
   main.innerHTML = views[state.section]();
   if (state.section === 'simular') updateSim();
   if (state.section === 'actividad') document.querySelector('#activity-search').value = state.filter.search;
   if (direction && !reduced.matches) {
-    main.animate([{ opacity: 0, transform: `translateX(${direction * 22}px)` }, { opacity: 1, transform: 'translateX(0)' }], { duration: 240, easing: 'cubic-bezier(.2,.7,.2,1)' });
-    nav.querySelector('[aria-current] .nav-glyph').animate([{ transform: 'scale(.9)' }, { transform: 'scale(1.22) translateY(-2px)', offset: .48 }, { transform: 'scale(1)' }], { duration: 310 });
+    pageTransition = main.animate([
+      { opacity: .25, transform: `translateX(${direction * 32}px) scale(.991)` },
+      { opacity: 1, transform: `translateX(${-direction * 2}px)`, offset: .82 },
+      { opacity: 1, transform: 'none' },
+    ], { duration: 345, easing: 'cubic-bezier(.2,.74,.25,1)' });
   }
   if (focus) main.querySelector(focus)?.focus({ preventScroll: true });
 }
@@ -363,27 +375,12 @@ function navigate(id, push = true) {
   const old = sections.findIndex(s => s[0] === state.section);
   const next = sections.findIndex(s => s[0] === id);
   state.section = id;
+  navigation.select(id);
   if (push && location.hash !== '#' + id) history.pushState({}, '', '#' + id);
   if (old !== next) window.scrollTo(0, 0);
   render({ direction: Math.sign(next - old) });
 }
 window.addEventListener('hashchange', () => navigate(getSection(), false));
-let navTouch = null;
-nav.addEventListener('pointerdown', e => {
-  if (e.pointerType !== 'touch' || !e.isPrimary) return;
-  const link = e.target.closest('[data-nav]');
-  if (link) navTouch = { id: e.pointerId, link, x: e.clientX, y: e.clientY, moved: false };
-});
-nav.addEventListener('pointermove', e => {
-  if (navTouch?.id === e.pointerId && Math.hypot(e.clientX - navTouch.x, e.clientY - navTouch.y) > 8) navTouch.moved = true;
-});
-nav.addEventListener('pointercancel', () => { navTouch = null; });
-nav.addEventListener('pointerup', e => {
-  if (navTouch?.id !== e.pointerId) return;
-  const { link, moved } = navTouch;
-  navTouch = null;
-  if (!moved && document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-nav]') === link && state.section !== link.dataset.nav) navigate(link.dataset.nav);
-});
 document.addEventListener('click', e => {
   const link = e.target.closest('a[href^="#"]');
   if (!link || !sections.some(s => link.hash === '#' + s[0]) || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
@@ -410,6 +407,9 @@ function movementDialog(m) {
   dialog.showModal();
 }
 dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+main.addEventListener('toggle', e => {
+  if (e.target.matches('.financial-report')) state.reportOpen = e.target.open;
+}, true);
 
 main.addEventListener('click', e => {
   const target = e.target.closest('[data-action]');
@@ -419,10 +419,23 @@ main.addEventListener('click', e => {
   const focus = key ? `[data-action="${id}"][data-value="${value}"]` : undefined;
   switch (id) {
     case 'kind': state.kind = value; state.opened = false; state.category = null; break;
-    case 'day': state.day = Number(value); state.opened = true; state.category = null; render(); scrollDetail('day-detail', key); return;
+    case 'day':
+      if (state.section === 'inicio') state.kind = 'expense';
+      state.day = Number(value); state.opened = true; state.category = null;
+      render(); scrollDetail('day-detail', key); return;
     case 'category': state.category = state.category === value ? null : value; render({ focus }); if (state.category) scrollDetail('segment-detail', key); return;
     case 'compare-day': state.tab = 'compare'; state.compare = state.month === latest ? previous : latest; navigate('explorar'); if (key) main.focus(); return;
-    case 'tab': state.tab = value; break;
+    case 'tab': {
+      if (state.tab === value) return;
+      const tabs = ['days', 'compare', 'flow'];
+      const direction = Math.sign(tabs.indexOf(value) - tabs.indexOf(state.tab));
+      state.tab = value;
+      render({ focus });
+      if (!reduced.matches) main.querySelector('.panel').animate([
+        { opacity: .3, transform: `translateX(${direction * 14}px)` }, { opacity: 1, transform: 'none' },
+      ], { duration: 230, easing: 'ease-out' });
+      return;
+    }
     case 'explore': state.tab = 'days'; navigate('explorar'); if (key) main.focus(); return;
     case 'signal': state.kind = 'expense'; state.tab = 'days'; state.day = Number(value); state.opened = true; state.category = null; navigate('explorar'); scrollDetail('day-detail', key); return;
     case 'step': state.steps.add(value); if (value === 'explorar') { state.tab = 'days'; state.kind = 'expense'; state.day = daily(state.month).indexOf(Math.max(...daily(state.month))) + 1; state.opened = true; state.category = null; } navigate(value); if (key) main.focus(); return;
@@ -521,4 +534,3 @@ reduced.addEventListener('change', () => {
   if (state.section === 'explorar' && state.tab === 'flow') render();
 });
 render();
-requestAnimationFrame(() => nav.classList.add('nav-ready'));

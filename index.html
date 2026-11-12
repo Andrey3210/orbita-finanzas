@@ -3,31 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#0B1020">
-  <meta name="description" content="Órbita, tu observatorio financiero. Explora tus gastos y ensaya escenarios con datos de demostración.">
-  <title>Órbita — Observatorio financiero</title>
+  <meta name="theme-color" content="#161324">
+  <meta name="description" content="Explora tus finanzas del mes, entiende tus gastos y simula cambios con Órbita.">
+  <title>Órbita · Tus finanzas</title>
   <link rel="icon" type="image/svg+xml" href="./assets/mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./assets/style.css">
+  <link rel="stylesheet" href="./assets/layout.css">
 </head>
 <body>
   <a class="skip" href="#content">Saltar al contenido</a>
   <aside class="shell-nav" aria-label="Barra principal">
-    <a class="brand" href="#inicio"><img src="./assets/mark.svg" alt="" width="36" height="36"><span>Órbita<small>OBSERVATORIO FINANCIERO</small></span></a>
-    <span class="nav-caption">NAVEGACIÓN</span>
+    <a class="brand" href="#inicio"><img src="./assets/mark.svg" alt="" width="38" height="38"><span>órbita</span></a>
     <nav id="nav" aria-label="Secciones principales"><i id="nav-indicator" aria-hidden="true"></i></nav>
-    <div class="nav-foot"><span class="demo-symbol" id="demo-icon"></span><span><strong>Modo demostración</strong><small>Datos ficticios · PEN</small></span></div>
   </aside>
   <div class="workspace">
     <header class="top">
-      <a class="brand mobile-brand" href="#inicio"><img src="./assets/mark.svg" alt="" width="30" height="30"><span>Órbita</span></a>
-      <div class="crumb"><span class="live-dot"></span> ESTACIÓN PERSONAL <span class="slash">/</span> <strong id="crumb-label">INICIO</strong></div>
-      <div class="top-end"><span class="period" id="period-label"></span><span class="avatar" title="Perfil de demostración" aria-label="Perfil de demostración">A</span></div>
+      <a class="brand mobile-brand" href="#inicio"><img src="./assets/mark.svg" alt="" width="31" height="31"><span>órbita</span></a>
+      <span class="demo-label"><i></i> <span>Datos de muestra</span></span>
     </header>
     <main id="content" tabindex="-1"></main>
-    <footer><span>ÓRBITA / OBSERVATORIO FINANCIERO</span><span>DATOS DE DEMOSTRACIÓN · PEN</span></footer>
   </div>
   <dialog id="movement-dialog" aria-labelledby="movement-title"></dialog>
   <script type="module" src="./assets/app.js"></script>

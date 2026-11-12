@@ -4,6 +4,8 @@ Prototipo web en español para explorar cuentas, gastos, ingresos y transferenci
 
 ## Cómo probarlo
 
+En Inicio, abre **Ver resumen completo** para consultar los saldos por cuenta, el flujo del mes y el desglose de gastos. En móvil, desliza el dedo por la barra inferior y suéltalo sobre la sección que quieres abrir.
+
 1. En **Inicio**, toca la columna o la etiqueta del **15 de octubre**. El pico suma **S/ 1,480.00**.
 2. Abre **Hogar** y selecciona **Alquiler · Miraflores** para ver el movimiento de **S/ 1,150.00**.
 3. Cierra el detalle y toca **Comparar este día**. Octubre supera a septiembre por **S/ 951.00** ese día. **Hogar** aporta **S/ 840.00** a la diferencia.

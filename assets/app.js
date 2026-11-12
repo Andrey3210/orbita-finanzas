@@ -208,10 +208,13 @@ function flowPanel() {
   const sinks = expenses.filter(c => all.some(r => r.category === c));
   const active = all.find(r => r.id === state.selectedRoute);
   const grand = sum(all);
-  const measure = cents => 3 + cents / grand * 73;
+  const measure = cents => cents / grand * 87;
+  const totalAt = (key, id) => sum(all.filter(r => r[key] === id));
+  const position = (items, id) => items.length === 1 ? 136 : 34 + items.indexOf(id) * 204 / (items.length - 1);
+  const nodeStyle = (items, key, id, color) => `--y:${position(items, id) / 272 * 100}%;--node-size:${Math.max(12, measure(totalAt(key, id))) / 272 * 100}%;--tint:${color}`;
   const distribute = (items, id, key) => {
     const subset = all.filter(r => r[key] === id);
-    let cursor = items.length === 1 ? 136 : 34 + items.indexOf(id) * 204 / (items.length - 1);
+    let cursor = position(items, id);
     cursor -= subset.reduce((n, r) => n + measure(r.cents), 0) / 2;
     return Object.fromEntries(subset.map(r => {
       const w = measure(r.cents), center = cursor + w / 2;
@@ -222,7 +225,7 @@ function flowPanel() {
   return `<section class="panel block flow-panel"><div class="panel-head"><div><p class="eyebrow">${icon('flow', 14)} MAPA DE FLUJOS</p><h2>Sigue el dinero</h2><p>El ancho de cada ruta muestra cuánto salió de una cuenta hacia una categoría.</p></div>${select('Mes del flujo', 'month', monthItems, state.month)}</div>
     <div class="flow-captions"><span>CUENTAS DE ORIGEN</span><span>CATEGORÍAS DE DESTINO</span></div>
     <div class="flow-figure">
-      <div class="flow-nodes from">${sources.map(a => `<div style="--y:${(sources.length === 1 ? 136 : 34 + sources.indexOf(a) * 204 / (sources.length - 1)) / 272 * 100}%;--tint:${a.color}"><span>${a.short}</span><i></i></div>`).join('')}</div>
+      <div class="flow-nodes from">${sources.map(a => `<div style="${nodeStyle(sources.map(s => s.id), 'account', a.id, a.color)}"><span>${a.short}</span><i></i></div>`).join('')}</div>
       <svg viewBox="0 0 500 272" preserveAspectRatio="none" aria-label="Rutas de gastos de izquierda a derecha">
         ${[100,200,300,400].map(x => `<path class="svg-grid" d="M${x} 0V272"/>`).join('')}
         ${[...all].sort((a, b) => Number(a.id === active?.id) - Number(b.id === active?.id)).map(r => {
@@ -234,7 +237,7 @@ function flowPanel() {
             ${reduced.matches ? '' : `<circle r="2.7" fill="#f2f5ff" aria-hidden="true"><animateMotion dur="${2.6 + ty / 165}s" begin="-${sy / 110}s" repeatCount="indefinite" path="${d}"/></circle>`}</g>`;
         }).join('')}
       </svg>
-      <div class="flow-nodes to">${sinks.map(c => `<div style="--y:${(34 + sinks.indexOf(c) * 204 / (sinks.length - 1)) / 272 * 100}%;--tint:${categories[c].color}"><i></i><span>${categories[c].label}</span></div>`).join('')}</div>
+      <div class="flow-nodes to">${sinks.map(c => `<div style="${nodeStyle(sinks, 'category', c, categories[c].color)}"><i></i><span>${categories[c].label}</span></div>`).join('')}</div>
     </div>
     <div class="flow-controls">${select('Ruta de dinero', 'flow-select', [['', 'Todas las rutas'], ...all.map(r => [r.id, account(r.account).short + ' → ' + categories[r.category].label])], active?.id ?? '')}<span>${all.length} rutas · ${money(grand)} en gastos</span></div>
     ${active ? `<div class="unfold"><div class="detail-head"><div><p class="eyebrow">${account(active.account).label} → ${categories[active.category].label}</p><h3>${money(active.cents)}</h3></div></div>${movementList(active.items)}</div>` : ''}
@@ -365,11 +368,27 @@ function navigate(id, push = true) {
   render({ direction: Math.sign(next - old) });
 }
 window.addEventListener('hashchange', () => navigate(getSection(), false));
+let navTouch = null;
+nav.addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'touch' || !e.isPrimary) return;
+  const link = e.target.closest('[data-nav]');
+  if (link) navTouch = { id: e.pointerId, link, x: e.clientX, y: e.clientY, moved: false };
+});
+nav.addEventListener('pointermove', e => {
+  if (navTouch?.id === e.pointerId && Math.hypot(e.clientX - navTouch.x, e.clientY - navTouch.y) > 8) navTouch.moved = true;
+});
+nav.addEventListener('pointercancel', () => { navTouch = null; });
+nav.addEventListener('pointerup', e => {
+  if (navTouch?.id !== e.pointerId) return;
+  const { link, moved } = navTouch;
+  navTouch = null;
+  if (!moved && document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-nav]') === link && state.section !== link.dataset.nav) navigate(link.dataset.nav);
+});
 document.addEventListener('click', e => {
   const link = e.target.closest('a[href^="#"]');
   if (!link || !sections.some(s => link.hash === '#' + s[0]) || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
   e.preventDefault();
-  navigate(link.hash.slice(1));
+  if (state.section !== link.hash.slice(1)) navigate(link.hash.slice(1));
   if (e.detail === 0) main.focus();
 });
 
@@ -446,7 +465,7 @@ let drag = null;
 main.addEventListener('pointerdown', e => {
   const btn = e.target.closest('[data-event], [data-month-drag]');
   if (!btn || e.button !== 0) return;
-  drag = { btn, pointer: e.pointerId, x: e.clientX, event: btn.dataset.event, month: btn.dataset.monthDrag };
+  drag = { btn, pointer: e.pointerId, x: e.clientX, y: e.clientY, event: btn.dataset.event, month: btn.dataset.monthDrag };
   btn.setPointerCapture(e.pointerId);
   if (drag.event) {
     state.event = drag.event; updateSim(false);
@@ -461,7 +480,7 @@ main.addEventListener('pointermove', e => {
     state.dates[drag.event] = Math.min(30, Math.max(1, 1 + Math.round(29 * (e.clientX - rect.left) / rect.width)));
     updateSim(false);
   } else if (drag.month !== undefined) {
-    drag.btn.style.transform = `translateX(${e.clientX - drag.x}px)`;
+    drag.btn.style.transform = `translate(${e.clientX - drag.x}px, ${e.clientY - drag.y}px)`;
     const hit = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-month-target]');
     for (const el of main.querySelectorAll('[data-month-target]')) el.classList.toggle('drop-ready', el === hit && !el.contains(drag.btn));
   }

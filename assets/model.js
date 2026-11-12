@@ -1,17 +1,17 @@
 export const accounts = [
-  { id: 'principal', label: 'Cuenta principal', short: 'Principal', icon: 'wallet', opening: 2900, color: '#ffb166', suffix: '4821' },
-  { id: 'ahorros', label: 'Ahorros', short: 'Ahorros', icon: 'vault', opening: 4350, color: '#ffe6d0', suffix: '0624' },
-  { id: 'digital', label: 'Billetera digital', short: 'Digital', icon: 'card', opening: 1900, color: '#e7751f', suffix: '2190' },
+  { id: 'principal', label: 'Cuenta principal', short: 'Principal', icon: 'wallet', opening: 2900, color: '#edb181', suffix: '4821' },
+  { id: 'ahorros', label: 'Ahorros', short: 'Ahorros', icon: 'vault', opening: 4350, color: '#f5ddc5', suffix: '0624' },
+  { id: 'digital', label: 'Billetera digital', short: 'Digital', icon: 'card', opening: 1900, color: '#d49a5d', suffix: '2190' },
 ];
 
 export const categories = {
-  hogar: { label: 'Hogar', color: '#ffb166', icon: 'home' },
-  comida: { label: 'Comida', color: '#ffe6d0', icon: 'food' },
-  transporte: { label: 'Transporte', color: '#e7751f', icon: 'compass' },
-  ocio: { label: 'Ocio', color: '#ff9c7e', icon: 'spark' },
-  servicios: { label: 'Servicios', color: '#c85d38', icon: 'bolt' },
-  ingreso: { label: 'Ingresos', color: '#ffb166', icon: 'arrowDown' },
-  transferencia: { label: 'Entre tus cuentas', color: '#ffb166', icon: 'transfer' },
+  hogar: { label: 'Hogar', color: '#edb181', icon: 'home' },
+  comida: { label: 'Comida', color: '#f5ddc5', icon: 'food' },
+  transporte: { label: 'Transporte', color: '#d49a5d', icon: 'compass' },
+  ocio: { label: 'Ocio', color: '#e5a097', icon: 'spark' },
+  servicios: { label: 'Servicios', color: '#c18471', icon: 'bolt' },
+  ingreso: { label: 'Ingresos', color: '#edb181', icon: 'arrowDown' },
+  transferencia: { label: 'Entre tus cuentas', color: '#edb181', icon: 'transfer' },
 };
 export const expenses = Object.keys(categories).slice(0, 5);
 export const months = {

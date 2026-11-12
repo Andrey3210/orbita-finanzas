@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-6';
-import { icon } from './icons.js?v=foxio-6';
-import { createNavigation } from './navigation.js?v=foxio-6';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-7';
+import { icon } from './icons.js?v=foxio-7';
+import { createNavigation } from './navigation.js?v=foxio-7';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'apricot'], ['cuentas', 'Cuentas', 'wallet', 'honey'], ['explorar', 'Explorar', 'compass', 'orange'],
@@ -53,7 +53,7 @@ const navigation = createNavigation(nav, main, state.section, navigate);
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-6" width="512" height="512" alt="" draggable="false">`;
+const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-7" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
   const report = monthlyReport(state.month);
@@ -247,10 +247,10 @@ function comparePanel() {
       <svg viewBox="-3 0 606 180" preserveAspectRatio="none" role="img" aria-label="Curvas de ${kindName[state.kind].toLowerCase()} por día en la misma escala">
         <defs><clipPath id="above-a"><path d="${above(lineA)}"/></clipPath><clipPath id="below-a"><path d="${below(lineA)}"/></clipPath></defs>
         ${[10,51.5,93,134.5,176].map(n => `<path class="svg-grid" d="M0 ${n}H600"/>`).join('')}
-        <g class="${reveal ? 'chart-sweep' : ''}"><path d="${area}" clip-path="url(#below-a)" fill="#ffb166" opacity=".23"/><path d="${area}" clip-path="url(#above-a)" fill="#ffe6d0" opacity=".23"/>
+        <g class="${reveal ? 'chart-sweep' : ''}"><path d="${area}" clip-path="url(#below-a)" fill="#edb181" opacity=".23"/><path d="${area}" clip-path="url(#above-a)" fill="#f5ddc5" opacity=".23"/>
         <path d="${pathOf(lineB)}" class="reference-line"/><path d="${pathOf(lineA)}" class="current-line"/></g>
         <path d="M${x(d - 1)} 7V177" class="guide-line"/>
-        ${[[a, '#ffb166'], [b, '#ffe6d0']].map(([values, color]) => values[d - 1] === undefined ? '' : `<circle class="chart-marker" cx="${x(d - 1)}" cy="${y(values[d - 1])}" r="3.5" fill="${color}" stroke="#340c04"/>`).join('')}
+        ${[[a, '#edb181'], [b, '#f5ddc5']].map(([values, color]) => values[d - 1] === undefined ? '' : `<circle class="chart-marker" cx="${x(d - 1)}" cy="${y(values[d - 1])}" r="3.5" fill="${color}" stroke="#2b1b15"/>`).join('')}
       </svg>
       <div class="compare-hits" aria-hidden="true">${Array.from({ length: 31 }, (_, i) => `<button tabindex="-1" ${action('pick-compare', i + 1)} title="Día ${i + 1}"></button>`).join('')}</div>
       <div class="line-days" aria-hidden="true">${[1,5,10,15,20,25,31].map(n => `<span style="left:${(n - 1) / 30 * 100}%">${String(n).padStart(2, '0')}</span>`).join('')}</div>
@@ -296,7 +296,7 @@ function flowPanel() {
           const selected = active?.id === r.id;
           return `<g class="flow-route ${active && !selected ? 'dim' : ''} ${selected ? 'lit' : ''}" ${action('route', r.id)}><title>${account(r.account).label} → ${categories[r.category].label}: ${money(r.cents)}</title>
             <path d="${d}" fill="none" stroke="${color}" stroke-width="${measure(r.cents)}"/><path class="flow-hit" d="${d}" fill="none" stroke="transparent" stroke-width="${Math.max(12, measure(r.cents))}"/>
-            ${reduced.matches ? '' : `<circle r="2.7" fill="#fff4e8" aria-hidden="true"><animateMotion dur="${2.6 + ty / 165}s" begin="-${sy / 110}s" repeatCount="indefinite" path="${d}"/></circle>`}</g>`;
+            ${reduced.matches ? '' : `<circle r="2.7" fill="#faeee3" aria-hidden="true"><animateMotion dur="${2.6 + ty / 165}s" begin="-${sy / 110}s" repeatCount="indefinite" path="${d}"/></circle>`}</g>`;
         }).join('')}</g>
       </svg>
       <div class="flow-nodes to">${sinks.map(c => `<div style="${nodeStyle(sinks, 'category', c, categories[c].color)}"><i></i><span>${categories[c].label}</span></div>`).join('')}</div>

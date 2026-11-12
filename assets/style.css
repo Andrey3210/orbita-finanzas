@@ -38,9 +38,11 @@ main:focus, [tabindex="-1"]:focus:not(:focus-visible) { outline: 0; }
 .select-wrap select { width: 100%; min-width: 0; max-width: 100%; appearance: none; min-height: 38px; border: 0; border-radius: inherit; background: transparent; color: var(--text); padding: 7px 25px 7px 29px; font-size: 11px; font-weight: 600; cursor: pointer; }
 .select-wrap option { background: #461709; color: var(--text); }
 .plot-unit { color: var(--quiet); font: 700 9px var(--heading); white-space: nowrap; letter-spacing: .09em; }
-.bar-figure, .line-figure { display: grid; grid-template-columns: 32px minmax(0,1fr); column-gap: 8px; }
+.bar-figure, .line-figure { display: grid; grid-template-columns: minmax(0,1fr) 32px; column-gap: 8px; }
 .bar-figure { --plot-height: 157px; --day-width: 28px; margin: 16px 0 0; align-items: start; }
 .y-labels { color: #e3b799; font: 600 10px var(--heading); display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; position: relative; }
+.bar-figure .y-labels, .line-figure .y-labels { grid-area: 1 / 2; align-items: flex-start; }
+.bar-scroll, .line-plot { grid-area: 1 / 1; }
 .bar-figure .y-labels { height: calc(var(--plot-height) + 10px); margin: -5px 0 0; }
 .bar-scroll { overflow-x: auto; min-width: 0; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: #a35a35 transparent; }
 .bar-plot { display: grid; grid-template-columns: repeat(var(--days), minmax(0,1fr)); position: relative; min-width: max(100%,calc(var(--days) * var(--day-width))); height: var(--plot-height); margin-bottom: 25px; }
@@ -50,7 +52,7 @@ main:focus, [tabindex="-1"]:focus:not(:focus-visible) { outline: 0; }
 .bar-cell { min-width: 0; position: relative; }
 .bar-hit { display: flex; align-items: end; justify-content: center; border: 0; background: transparent; color: inherit; padding: 0 0 25px; position: absolute; inset: 0 0 -25px; border-radius: 5px; width: 100%; }
 .bar-hit:focus-visible { z-index: 3; outline-offset: 0; }
-.bar-solid { width: 70%; max-width: 24px; min-width: 3px; height: var(--height); background: linear-gradient(0deg,#8c3f1f,#b15526); border-radius: 3px 3px 1px 1px; opacity: .8; transform-origin: bottom; transition: opacity .2s, background .2s; }
+.bar-solid { width: 72%; max-width: 32px; min-width: 3px; height: var(--height); background: linear-gradient(0deg,#8c3f1f,#b15526); border-radius: 7px; opacity: .8; transform-origin: bottom; transition: opacity .2s, background .2s; }
 .bar-solid.zero { height: 2px; background: #6c3018; opacity: .7; }
 .bars-enter .bar-solid:not(.zero) { animation: bar-rise .5s var(--ease) calc(8ms * var(--column)) both; }
 @keyframes bar-rise { from { transform: scaleY(.03); opacity: .25; } }

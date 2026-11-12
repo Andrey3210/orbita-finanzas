@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-5';
-import { icon } from './icons.js?v=foxio-5';
-import { createNavigation } from './navigation.js?v=foxio-5';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-6';
+import { icon } from './icons.js?v=foxio-6';
+import { createNavigation } from './navigation.js?v=foxio-6';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'apricot'], ['cuentas', 'Cuentas', 'wallet', 'honey'], ['explorar', 'Explorar', 'compass', 'orange'],
@@ -53,7 +53,7 @@ const navigation = createNavigation(nav, main, state.section, navigate);
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-5" width="512" height="512" alt="" draggable="false">`;
+const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-6" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
   const report = monthlyReport(state.month);
@@ -76,20 +76,18 @@ function home() {
 function spendingPanel(report) {
   const selected = report.byCategory.find(group => group.category === state.spendingCategory);
   const shares = report.byCategory.map(group => group.cents / report.expense * 100);
-  const percentages = shares.map(Math.floor);
-  if (shares.length) {
-    const remainder = 100 - percentages.reduce((total, value) => total + value, 0);
-    const fractions = shares.map((share, index) => ({ index, fraction: share - percentages[index] }));
-    fractions.sort((a, b) => b.fraction - a.fraction);
-    for (const { index } of fractions.slice(0, remainder)) percentages[index]++;
-  }
+  const radius = 88;
+  const weight = 17;
+  const arc = `M24 103 A${radius} ${radius} 0 0 1 200 103`;
+  // Reserve space for each round cap as well as the visible gap between slices.
+  const gap = (weight + 2.5) * 100 / (Math.PI * radius);
   let offset = 0;
   const slices = report.byCategory.map((group, index) => {
     const category = categories[group.category];
     const share = shares[index];
-    const visible = Math.max(0, share - 1.25);
-    const shape = `<circle class="donut-slice ${group === selected ? 'selected' : ''}" ${action('spending', group.category)} cx="100" cy="100" r="80" pathLength="100"
-      stroke="${category.color}" stroke-dasharray="${visible} ${100 - visible}" stroke-dashoffset="${-offset - .625}"/>`;
+    const visible = Math.max(0, share - gap);
+    const shape = `<path class="donut-slice ${group === selected ? 'selected' : ''}" ${action('spending', group.category)} d="${arc}" pathLength="100"
+      stroke="${category.color}" stroke-dasharray="${visible} ${100 - visible}" stroke-dashoffset="${-offset - gap / 2}"/>`;
     offset += share;
     return shape;
   }).join('');
@@ -97,18 +95,18 @@ function spendingPanel(report) {
     <div class="panel-head"><h2 id="spending-title">Gastos por categoría</h2></div>
     <div class="spending-body ${selected ? 'has-selection' : ''}">
       <div class="donut">
-        <svg class="donut-chart" viewBox="0 0 200 200" aria-hidden="true">
-          <circle class="donut-track" cx="100" cy="100" r="80"/>
-          <g transform="rotate(-90 100 100)">${slices}</g>
+        <svg class="donut-chart" viewBox="0 0 224 117" stroke-width="${weight}" stroke-linecap="round" aria-hidden="true">
+          ${slices ? '' : `<path class="donut-track" d="${arc}"/>`}
+          <g>${slices}</g>
         </svg>
         <div class="donut-total" aria-live="polite"><span>${selected ? categories[selected.category].label : 'Total'}</span><strong>${money(selected?.cents ?? report.expense)}</strong></div>
       </div>
       <div class="spending-key" aria-label="Categorías">
         ${report.byCategory.map((group, index) => {
           const category = categories[group.category];
-          const share = percentages[index] + '%';
+          const share = Math.round(shares[index]) + '%';
           return `<button class="spending-key-row" ${action('spending', group.category)} aria-pressed="${group === selected}" aria-label="${category.label}, ${share}, ${money(group.cents)}">
-            <i style="--tint:${category.color}"></i><span>${category.label}</span><strong>${share}</strong>
+            <i style="--tint:${category.color}"></i><span>${category.label}</span><strong>${money(group.cents)}</strong>
           </button>`;
         }).join('')}
       </div>
@@ -360,6 +358,7 @@ function forecastView() {
         <div class="line-figure forecast-figure"><div class="y-labels" aria-hidden="true">${ticks.map(tick => `<span style="top:${y(tick) / 180 * 100}%">${tick < 0 ? '−' : ''}${num(Math.abs(tick) / 100)}</span>`).join('')}</div>
           <div class="line-plot">
             <svg viewBox="-3 0 606 180" preserveAspectRatio="none" role="img" aria-label="Saldo estimado desde ${money(opening)} hasta ${signed(closing).replace(/^\+/, '')} el día ${days}">
+              <defs><linearGradient id="forecast-fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-opacity=".27"/><stop offset="1" stop-opacity="0"/></linearGradient></defs>
               ${ticks.map(tick => `<path class="svg-grid" d="M0 ${y(tick)}H600"/>`).join('')}
               <path class="reference-line" d="M0 ${y(opening)}H600"/>
               <g class="chart-sweep"><path class="forecast-area" d="${area}"/><path class="current-line" id="forecast-line" d="${line}"/><circle cx="600" cy="${y(closing)}" r="4" class="forecast-point"/></g>

@@ -1,4 +1,4 @@
-const version = 'foxio-1';
+const version = 'foxio-2';
 const root = new URL(self.registration.scope);
 const cachePrefix = 'foxio-app:' + root.pathname + ':';
 const cacheName = cachePrefix + version;
@@ -8,7 +8,7 @@ const shell = [
   ...['style.css', 'layout.css', 'app.js', 'pwa.js', 'model.js', 'icons.js', 'navigation.js',
     'zorro-inicio.webp', 'zorro-cuentas.webp', 'zorro-explorar.webp', 'zorro-simular.webp', 'zorro-actividad.webp'
   ].map(file => './assets/' + file + '?v=' + version),
-  './manifest.webmanifest?v=' + version,
+  './manifest.webmanifest',
   './assets/foxio-180.png', './assets/foxio-192.png', './assets/foxio-512.png', './assets/foxio-maskable.png',
 ];
 const shellUrls = new Set(shell.map(path => new URL(path, root).href));

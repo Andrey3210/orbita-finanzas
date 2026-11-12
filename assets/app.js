@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, forecastStart, events, defaultDates, project } from './model.js?v=foxio-1';
-import { icon } from './icons.js?v=foxio-1';
-import { createNavigation } from './navigation.js?v=foxio-1';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, forecastStart, events, defaultDates, project } from './model.js?v=foxio-2';
+import { icon } from './icons.js?v=foxio-2';
+import { createNavigation } from './navigation.js?v=foxio-2';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'apricot'], ['cuentas', 'Cuentas', 'wallet', 'honey'], ['explorar', 'Explorar', 'compass', 'orange'],
@@ -51,7 +51,7 @@ window.addEventListener('resize', () => {
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-1" width="512" height="512" alt="" draggable="false">`;
+const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-2" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
   const report = monthlyReport(state.month);

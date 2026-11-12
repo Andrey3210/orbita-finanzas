@@ -137,7 +137,9 @@ try {
   await desktop.waitForFunction(() => Boolean(navigator.serviceWorker.controller), undefined, { timeout: 12000 });
   const installCheck = await desktop.context().newCDPSession(desktop);
   const manifest = await installCheck.send('Page.getAppManifest');
-  assert.equal(JSON.parse(manifest.data).name, 'foxio');
+  const manifestData = JSON.parse(manifest.data);
+  assert.equal(manifestData.name, 'foxio');
+  assert.equal(manifestData.id, '/orbita-finanzas/');
   assert.deepEqual((await installCheck.send('Page.getInstallabilityErrors')).installabilityErrors, []);
   await desktop.context().setOffline(true);
   await desktop.reload();

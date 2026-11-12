@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-7';
-import { icon } from './icons.js?v=foxio-7';
-import { createNavigation } from './navigation.js?v=foxio-7';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-8';
+import { icon } from './icons.js?v=foxio-8';
+import { createNavigation } from './navigation.js?v=foxio-8';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'apricot'], ['cuentas', 'Cuentas', 'wallet', 'honey'], ['explorar', 'Explorar', 'compass', 'orange'],
@@ -53,7 +53,7 @@ const navigation = createNavigation(nav, main, state.section, navigate);
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-7" width="512" height="512" alt="" draggable="false">`;
+const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-8" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
   const report = monthlyReport(state.month);
@@ -135,7 +135,7 @@ function financialDetails(report) {
   const delta = (label, cents) => row(label, signed(cents));
   const monthDiff = report.prior
     ? `<dl>${delta('Ingresos', report.income - report.prior.income)}${delta('Gastos', report.expense - report.prior.expense)}${delta('Balance', report.net - (report.prior.income - report.prior.expense))}</dl>`
-    : '<p class="empty">Es el primer mes de la demo.</p>';
+    : '<p class="empty">Sin historial del mes anterior.</p>';
   return `<details class="financial-report" ${state.reportOpen ? 'open' : ''}>
     <summary><span>${icon('bars', 19)} Resumen completo</span>${icon('chevronDown', 18)}</summary>
     <div class="report-body">

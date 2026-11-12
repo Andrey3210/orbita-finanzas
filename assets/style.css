@@ -84,10 +84,10 @@ main:focus, [tabindex="-1"]:focus:not(:focus-visible) { outline: 0; }
 .detail-head h3 { font-size: clamp(22px, 3vw, 31px); letter-spacing: -.035em; margin-top: 4px; }
 .day-caption { color: var(--muted); font-size: 12px; }
 .category-grid { margin-top: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(165px,100%),1fr)); gap: 6px; }
-.category-tile { display: flex; align-items: center; gap: 7px; padding: 8px; min-height: 41px; border: 1px solid #795947; border-radius: 8px; color: var(--text); background: #3d2a22; text-align: left; font-size: 11px; }
+.category-tile { display: flex; align-items: center; gap: 7px; padding: 8px; min-height: 41px; border: 0; border-radius: 8px; color: var(--text); background: #493328; text-align: left; font-size: 11px; }
 .category-tile i { width: 8px; height: 8px; border-radius: 2px; background: var(--tint); flex: none; }
 .category-tile strong { margin-left: auto; white-space: nowrap; }
-button.category-tile:hover, .category-tile[aria-pressed="true"] { border-color: var(--tint); }
+button.category-tile:hover, .category-tile[aria-pressed="true"] { background: color-mix(in srgb, var(--tint) 16%, #493328); }
 .movement-list { margin-top: 7px; display: grid; }
 .movement { width: 100%; min-height: 54px; display: grid; grid-template-columns: auto minmax(0,1fr) auto auto; gap: 9px; align-items: center; padding: 7px 3px; background: transparent; color: var(--text); border: 0; border-bottom: 1px solid #654a3c; text-align: left; }
 .movement:last-child { border-bottom: 0; }
@@ -153,7 +153,7 @@ button.category-tile:hover, .category-tile[aria-pressed="true"] { border-color: 
 .search-wrap input:focus { outline: none; }
 .search-wrap:focus-within { outline: 2px solid var(--apricot); }
 .result-count { font-size: 11px; color: var(--muted); padding: 5px 0 0; }
-dialog { width: min(430px,calc(100% - 26px)); color: var(--text); background: var(--panel); border: 1px solid #9b745c; border-radius: 16px; padding: 19px; box-shadow: 0 24px 90px #1c120dcc; }
+dialog { width: min(430px,calc(100% - 26px)); color: var(--text); background: var(--panel); border: 0; border-radius: 16px; padding: 19px; box-shadow: 0 24px 90px #1c120dcc; }
 dialog::backdrop { background: #211510bb; backdrop-filter: blur(4px); }
 .dialog-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 dialog h2 { font-size: 26px; margin: 4px 0; }

@@ -99,7 +99,7 @@ export function monthlyReport(month) {
   const earlier = Object.keys(months).filter(key => key < month).sort().at(-1);
   return {
     ...figures, net, opening: closing - net, closing, accountBalances: balances(month),
-    entries: entries.length, byCategory, largestExpense: [...outflows].sort((a, b) => b.cents - a.cents)[0],
+    entries: entries.length, byCategory,
     earlier, prior: earlier ? totals(earlier) : null,
   };
 }

@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-3';
-import { icon } from './icons.js?v=foxio-3';
-import { createNavigation } from './navigation.js?v=foxio-3';
+import { accounts, categories, expenses, months, latest, previous, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=foxio-4';
+import { icon } from './icons.js?v=foxio-4';
+import { createNavigation } from './navigation.js?v=foxio-4';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'apricot'], ['cuentas', 'Cuentas', 'wallet', 'honey'], ['explorar', 'Explorar', 'compass', 'orange'],
@@ -13,7 +13,7 @@ function getSection() {
 }
 const state = {
   section: getSection(), month: latest, day: 15, kind: 'expense', opened: false, category: null,
-  tab: 'days', selectedRoute: null,
+  tab: 'days', selectedRoute: null, spendingCategory: null,
   filter: { account: '', kind: '', search: '' }, reportOpen: false,
 };
 let lastCompareKey = '';
@@ -53,24 +53,83 @@ const navigation = createNavigation(nav, main, state.section, navigate);
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-3" width="512" height="512" alt="" draggable="false">`;
+const mascot = section => `<img class="mascot mascot-${section}" src="./assets/zorro-${section}.webp?v=foxio-4" width="512" height="512" alt="" draggable="false">`;
 
 function home() {
   const report = monthlyReport(state.month);
-  return `${heading('Tu resumen', select('Mes del resumen', 'month', monthItems, state.month))}
+  return `${heading('Resumen', select('Mes del resumen', 'month', monthItems, state.month))}
   <div class="home-main">
     <section class="hero" aria-label="Saldo total">
-      <div class="hero-balance"><span>Saldo total</span><strong>${money(report.closing)}</strong><span class="hero-footnote">En ${accounts.length} cuentas</span></div>
+      <div class="hero-balance"><span>Saldo total</span><strong>${money(report.closing)}</strong></div>
       <div class="hero-illustration"><i class="hero-orbit"></i><i class="hero-spark first">${icon('spark', 22)}</i><i class="hero-spark second">${icon('spark', 16)}</i>${mascot('inicio')}</div>
     </section>
     <section class="metrics" aria-label="Resumen del mes">
       ${metric('Ingresos', money(report.income), 'arrowDown', 'honey')}
-      ${metric('Gastos', money(report.expense), 'arrowUp', 'coral')}
       ${metric('Balance', signed(report.net), report.net < 0 ? 'trendDown' : 'trend', 'apricot', negative(report.net))}
     </section>
-    ${financialDetails(report)}
+    ${spendingPanel(report)}
     ${dayPanel(true)}
+    ${financialDetails(report)}
   </div>`;
+}
+
+function spendingPanel(report) {
+  const selected = report.byCategory.find(group => group.category === state.spendingCategory);
+  const shares = report.byCategory.map(group => group.cents / report.expense * 100);
+  const percentages = shares.map(Math.floor);
+  if (shares.length) {
+    const remainder = 100 - percentages.reduce((total, value) => total + value, 0);
+    const fractions = shares.map((share, index) => ({ index, fraction: share - percentages[index] }));
+    fractions.sort((a, b) => b.fraction - a.fraction);
+    for (const { index } of fractions.slice(0, remainder)) percentages[index]++;
+  }
+  let offset = 0;
+  const slices = report.byCategory.map((group, index) => {
+    const category = categories[group.category];
+    const share = shares[index];
+    const visible = Math.max(0, share - 1.25);
+    const shape = `<circle class="donut-slice ${group === selected ? 'selected' : ''}" ${action('spending', group.category)} cx="100" cy="100" r="80" pathLength="100"
+      stroke="${category.color}" stroke-dasharray="${visible} ${100 - visible}" stroke-dashoffset="${-offset - .625}"/>`;
+    offset += share;
+    return shape;
+  }).join('');
+  return `<section class="spending-panel" aria-labelledby="spending-title">
+    <div class="panel-head"><h2 id="spending-title">Gastos por categoría</h2></div>
+    <div class="spending-body ${selected ? 'has-selection' : ''}">
+      <div class="donut">
+        <svg class="donut-chart" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="donut-track" cx="100" cy="100" r="80"/>
+          <g transform="rotate(-90 100 100)">${slices}</g>
+        </svg>
+        <div class="donut-total" aria-live="polite"><span>${selected ? categories[selected.category].label : 'Total'}</span><strong>${money(selected?.cents ?? report.expense)}</strong></div>
+      </div>
+      <div class="spending-key" aria-label="Categorías">
+        ${report.byCategory.map((group, index) => {
+          const category = categories[group.category];
+          const share = percentages[index] + '%';
+          return `<button class="spending-key-row" ${action('spending', group.category)} aria-pressed="${group === selected}" aria-label="${category.label}, ${share}, ${money(group.cents)}">
+            <i style="--tint:${category.color}"></i><span>${category.label}</span><strong>${share}</strong>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>
+  </section>`;
+}
+
+function selectSpendingCategory(category) {
+  state.spendingCategory = category === state.spendingCategory ? null : category;
+  const section = main.querySelector('.spending-body');
+  const report = monthlyReport(state.month);
+  const selected = report.byCategory.find(group => group.category === state.spendingCategory);
+  section.classList.toggle('has-selection', Boolean(selected));
+  for (const row of section.querySelectorAll('.spending-key-row')) {
+    row.setAttribute('aria-pressed', String(row.dataset.value === selected?.category));
+  }
+  for (const slice of section.querySelectorAll('.donut-slice')) {
+    slice.classList.toggle('selected', slice.dataset.value === selected?.category);
+  }
+  section.querySelector('.donut-total span').textContent = selected ? categories[selected.category].label : 'Total';
+  section.querySelector('.donut-total strong').textContent = money(selected?.cents ?? report.expense);
 }
 
 function financialDetails(report) {
@@ -80,7 +139,7 @@ function financialDetails(report) {
     ? `<dl>${delta('Ingresos', report.income - report.prior.income)}${delta('Gastos', report.expense - report.prior.expense)}${delta('Balance', report.net - (report.prior.income - report.prior.expense))}</dl>`
     : '<p class="empty">Es el primer mes de la demo.</p>';
   return `<details class="financial-report" ${state.reportOpen ? 'open' : ''}>
-    <summary><span>${icon('bars', 19)} Ver resumen completo</span>${icon('chevronDown', 18)}</summary>
+    <summary><span>${icon('bars', 19)} Resumen completo</span>${icon('chevronDown', 18)}</summary>
     <div class="report-body">
       <section><h2>Flujo del mes</h2><dl>
         ${row('Saldo inicial', money(report.opening))}${row('Ingresos', money(report.income))}${row('Gastos', '−' + money(report.expense))}
@@ -93,7 +152,6 @@ function financialDetails(report) {
         return `<div><dt>${category.label}</dt><dd>${money(group.cents)}</dd><i style="--share:${share}%;--tint:${category.color}" aria-hidden="true"></i></div>`;
       }).join('')}</dl></section>
       <section><h2>${report.earlier ? 'Frente a ' + monthName(report.earlier).toLowerCase() : 'Comparación mensual'}</h2>${monthDiff}</section>
-      ${report.largestExpense ? `<section class="report-highlight"><h2>Mayor gasto individual</h2>${movementList([report.largestExpense])}</section>` : ''}
     </div></details>`;
 }
 
@@ -111,10 +169,13 @@ function dayPanel(isHome = false) {
   const total = sum(list);
   const guides = [1, .75, .5, .25, 0];
   const labelDays = state.month === latest ? [1, 5, 10, 15, 20, 25, 31] : [1, 5, 10, 15, 20, 25, 30];
+  const dayOptions = [['', 'Ir a un día'], ...values.map((_, i) => [String(i + 1), `${i + 1} ${months[state.month].short}`])];
+  const dayPicker = select('Ir a un día', 'chart-day', dayOptions, state.opened ? String(day) : '');
   return `<section class="panel day-panel ${isHome ? 'home-chart' : ''}" aria-labelledby="day-title">
-    <div class="panel-head"><h2 id="day-title">${isHome ? 'Gastos por día' : 'Movimientos por día'}</h2>${isHome ? '<span class="plot-unit">PEN</span>' : `<div class="chart-filters">${select('Tipo de movimiento', 'kind', Object.entries(kindName), kind)}${select('Mes del gráfico', 'month', monthItems, state.month)}</div>`}</div>
+    <div class="panel-head"><div class="chart-title"><h2 id="day-title">${isHome ? 'Gastos por día' : 'Movimientos por día'}</h2><span class="plot-unit">S/</span></div>${isHome ? dayPicker : `<div class="chart-filters">${select('Tipo de movimiento', 'kind', Object.entries(kindName), kind)}${select('Mes del gráfico', 'month', monthItems, state.month)}${dayPicker}</div>`}</div>
     <div class="bar-figure ${state.opened ? 'drilling' : ''} ${reveal ? 'bars-enter' : ''}">
       <div class="y-labels" aria-hidden="true">${guides.map(g => `<span>${num(scale * g / 100)}</span>`).join('')}</div>
+      <div class="bar-scroll" data-chart-key="${key}" role="region" aria-label="Barras por día, desplazamiento horizontal">
       <div class="bar-plot" style="--days:${values.length}">
         <div class="grid-lines" aria-hidden="true">${guides.map(() => '<i></i>').join('')}</div>
         ${values.map((cents, i) => {
@@ -125,18 +186,18 @@ function dayPanel(isHome = false) {
             <button class="bar-hit" ${action('day', d)} aria-label="${dateText(state.month, d)}: ${money(cents)}" aria-pressed="${state.opened && day === d}">
               <span class="bar-solid ${cents === 0 ? 'zero' : ''}"></span>
               ${highlighted && !state.opened && cents > 0 ? `<span class="peak-label" aria-hidden="true">${d} ${months[state.month].short.toUpperCase()} <b>${money(cents)}</b></span>` : ''}
+              <span class="x-tick ${labelDays.includes(d) ? '' : 'is-minor'}" aria-hidden="true">${d}</span>
             </button>
-            ${split ? `<div class="bar-split">${breakdown.map(g => `<button ${action('category', g.category)} title="${categories[g.category].label} · ${money(g.cents)}" aria-label="${categories[g.category].label}: ${money(g.cents)}" aria-pressed="${g.category === state.category}" style="--share:${g.cents};--tint:${categories[g.category].color}"></button>`).join('')}</div>` : ''}
-            ${labelDays.includes(d) ? `<span class="x-tick">${String(d).padStart(2, '0')}</span>` : ''}
+            ${split ? `<div class="bar-split" aria-hidden="true">${breakdown.map(g => `<span class="${g.category === state.category ? 'selected' : ''}" style="--share:${g.cents};--tint:${categories[g.category].color}"></span>`).join('')}</div>` : ''}
           </div>`;
         }).join('')}
-      </div>
+      </div></div>
     </div>
     ${state.opened ? `<div class="day-detail" id="day-detail">
-      <div class="detail-head"><div><p class="eyebrow">DÍA ${String(day).padStart(2, '0')} / ${monthName(state.month).toUpperCase()}</p><h3>${money(total)}</h3></div><button class="subtle-button" ${action('compare-day') }>${icon('layers', 15)} Comparar este día</button></div>
+      <div class="detail-head"><div><p class="day-caption">${dateText(state.month, day)}</p><h3>${money(total)}</h3></div><button class="subtle-button" aria-label="Comparar este día" ${action('compare-day') }>${icon('layers', 15)} Comparar</button></div>
       ${breakdown.length ? `<div class="category-grid">${breakdown.map(g => `<button class="category-tile" style="--tint:${categories[g.category].color}" ${action('category', g.category)} aria-pressed="${state.category === g.category}"><i></i><span>${categories[g.category].label}</span><strong>${money(g.cents)}</strong>${icon('chevron', 14)}</button>`).join('')}</div>` : '<p class="empty">No hay movimientos de este tipo en este día.</p>'}
-      ${state.category && breakdown.some(g => g.category === state.category) ? `<div class="unfold" id="segment-detail"><p class="eyebrow">${categories[state.category].label} / MOVIMIENTOS</p>${movementList(breakdown.find(g => g.category === state.category).items)}</div>` : ''}
-    </div>` : '<p class="chart-foot">Selecciona una barra para ver el detalle</p>'}
+      ${state.category && breakdown.some(g => g.category === state.category) ? `<div class="unfold" id="segment-detail">${movementList(breakdown.find(g => g.category === state.category).items)}</div>` : ''}
+    </div>` : ''}
   </section>`;
 }
 
@@ -177,7 +238,7 @@ function comparePanel() {
   const reveal = lastCompareKey !== key;
   lastCompareKey = key;
   return `<section class="panel block compare-panel">
-    <div class="panel-head"><h2>Dos meses, una escala</h2>${select('Tipo de movimiento', 'kind', Object.entries(kindName), state.kind)}</div>
+    <div class="panel-head"><h2>Comparación</h2>${select('Tipo de movimiento', 'kind', Object.entries(kindName), state.kind)}</div>
     <div class="compare-controls">
       <div class="compare-control base" data-month-target><span class="drag-chip" title="Arrastrar ${monthName(state.month)}" data-month-drag aria-hidden="true">⋮⋮</span>${select('Mes base', 'month', monthItems, state.month)}</div>
       <div class="compare-control ref" data-month-target><span class="drag-chip" title="Arrastrar ${monthName(reference)}" data-month-drag aria-hidden="true">⋮⋮</span><span class="compare-label">${monthName(reference)} 2026</span></div>
@@ -226,7 +287,7 @@ function flowPanel() {
     }));
   };
   return `<section class="panel block flow-panel"><div class="panel-head"><h2>Sigue el dinero</h2>${select('Mes del flujo', 'month', monthItems, state.month)}</div>
-    <div class="flow-captions"><span>CUENTAS DE ORIGEN</span><span>CATEGORÍAS DE DESTINO</span></div>
+    <div class="flow-captions"><span>Cuentas</span><span>Categorías</span></div>
     <div class="flow-figure">
       <div class="flow-nodes from">${sources.map(a => `<div style="${nodeStyle(sources.map(s => s.id), 'account', a.id, a.color)}"><span>${a.short}</span><i></i></div>`).join('')}</div>
       <svg viewBox="0 0 500 272" preserveAspectRatio="none" aria-label="Rutas de gastos de izquierda a derecha">
@@ -284,7 +345,7 @@ function forecastView() {
   const area = line + ' L600 174 L0 174 Z';
   const historyNames = history.map(key => monthName(key).toLowerCase()).join(' y ');
   const note = history.length === 2
-    ? `Basado en ${historyNames}, con doble peso para ${monthName(history.at(-1)).toLowerCase()}.`
+    ? `Historial de ${historyNames} · ${monthName(history.at(-1)).toLowerCase()} cuenta doble.`
     : `Basado en los movimientos de ${historyNames}.`;
 
   return heading('Pronóstico', `<span class="forecast-period">${periodName}</span>`,
@@ -335,7 +396,11 @@ function activity() {
 
 const views = { inicio: home, cuentas: accountsView, explorar: explore, pronostico: forecastView, actividad: activity };
 let pageTransition;
-function render({ focus, direction = 0 } = {}) {
+function render({ focus, direction = 0, centerDay = false } = {}) {
+  const previousChart = main.querySelector('.bar-scroll');
+  const chartPosition = previousChart && { key: previousChart.dataset.chartKey, left: previousChart.scrollLeft };
+  const report = main.querySelector('.financial-report');
+  if (report) state.reportOpen = report.open;
   if (state.section !== 'explorar' || state.tab !== 'compare') lastCompareKey = '';
   if (state.section !== 'inicio' && (state.section !== 'explorar' || state.tab !== 'days')) lastBarsKey = '';
   if (state.section !== 'explorar' || state.tab !== 'flow') lastFlowMonth = '';
@@ -343,6 +408,15 @@ function render({ focus, direction = 0 } = {}) {
   lastScene = state.section;
   pageTransition?.cancel();
   main.innerHTML = views[state.section]();
+  const chart = main.querySelector('.bar-scroll');
+  if (chart && chart.scrollWidth > chart.clientWidth) {
+    if (!centerDay && chartPosition?.key === chart.dataset.chartKey) {
+      chart.scrollLeft = chartPosition.left;
+    } else {
+      const cell = chart.querySelector('.bar-cell.highlighted');
+      if (cell) chart.scrollLeft = cell.offsetLeft + (cell.offsetWidth - chart.clientWidth) / 2;
+    }
+  }
   if (state.section === 'actividad') document.querySelector('#activity-search').value = state.filter.search;
   if (direction && !reduced.matches) {
     pageTransition = main.animate([
@@ -383,16 +457,13 @@ const scrollDetail = (id, keyboard) => {
 };
 function movementDialog(m) {
   dialog.innerHTML = `<div class="dialog-head">${badgeIcon(categories[m.category].icon)}<form method="dialog"><button class="subtle-button icon-button" aria-label="Cerrar detalle">${icon('close')}</button></form></div>
-    <p class="eyebrow">DETALLE DE MOVIMIENTO</p><h2 id="movement-title">${m.label}</h2><strong class="dialog-amount ${m.kind === 'income' ? 'positive' : ''}">${amount(m)}</strong>
+    <h2 id="movement-title">${m.label}</h2><strong class="dialog-amount ${m.kind === 'income' ? 'positive' : ''}">${amount(m)}</strong>
     <dl><div><dt>Fecha</dt><dd>${dateText(m.month, m.day)} de 2026</dd></div><div><dt>Cuenta de origen</dt><dd>${account(m.account).label}</dd></div>
     ${m.to ? `<div><dt>Cuenta de destino</dt><dd>${account(m.to).label}</dd></div>` : ''}
     <div><dt>Categoría</dt><dd>${categories[m.category].label}</dd></div><div><dt>Tipo</dt><dd>${kindName[m.kind]}</dd></div></dl>`;
   dialog.showModal();
 }
 dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
-main.addEventListener('toggle', e => {
-  if (e.target.matches('.financial-report')) state.reportOpen = e.target.open;
-}, true);
 
 main.addEventListener('click', e => {
   const target = e.target.closest('[data-action]');
@@ -401,6 +472,7 @@ main.addEventListener('click', e => {
   const key = e.detail === 0;
   const focus = key ? `[data-action="${id}"][data-value="${value}"]` : undefined;
   switch (id) {
+    case 'spending': selectSpendingCategory(value); return;
     case 'day':
       if (state.section === 'inicio') state.kind = 'expense';
       state.day = Number(value); state.opened = true; state.category = null;
@@ -430,7 +502,18 @@ main.addEventListener('click', e => {
 main.addEventListener('change', e => {
   const { value, dataset: { change: id } } = e.target;
   switch (id) {
-    case 'month': state.month = value; state.day = Math.min(state.day, months[value].days); state.opened = false; state.category = null; state.selectedRoute = null; break;
+    case 'month':
+      state.month = value;
+      state.day = Math.min(state.day, months[value].days);
+      state.opened = false; state.category = null; state.selectedRoute = null; state.spendingCategory = null;
+      break;
+    case 'chart-day':
+      if (value) state.day = Number(value);
+      if (state.section === 'inicio') state.kind = 'expense';
+      state.opened = Boolean(value); state.category = null;
+      render({ focus: '[data-change="chart-day"]', centerDay: true });
+      if (value) scrollDetail('day-detail', false);
+      return;
     case 'kind': state.kind = value; state.opened = false; state.category = null; break;
     case 'compare-day-select': state.day = Number(value); break;
     case 'flow-select': selectFlowRoute(value); return;
@@ -469,6 +552,7 @@ for (const name of ['pointerup', 'pointercancel']) main.addEventListener(name, e
   const hit = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-month-target]');
   if (name === 'pointerup' && hit && !hit.contains(btn)) {
     state.month = otherMonth(state.month);
+    state.spendingCategory = null;
     render();
   } else {
     for (const el of main.querySelectorAll('[data-month-target]')) el.classList.remove('drop-ready');

@@ -4,7 +4,7 @@ Prototipo web en español para explorar cuentas, gastos, ingresos y transferenci
 
 ## Cómo probarlo
 
-En Inicio, abre **Ver resumen completo** para consultar los saldos por cuenta, el flujo del mes y el desglose de gastos. En móvil, desliza el dedo por la barra inferior y suéltalo sobre la sección que quieres abrir.
+En Inicio, toca una categoría de la dona para ver su total. Desliza las barras o usa **Ir a un día** para encontrar una fecha. Debajo de los gráficos, **Resumen completo** reúne los saldos por cuenta, el flujo del mes y el desglose de gastos.
 
 1. En **Inicio**, toca la columna o la etiqueta del **15 de octubre**. El pico suma **S/ 1,480.00**.
 2. Abre **Hogar** y selecciona **Alquiler · Miraflores** para ver el movimiento de **S/ 1,150.00**.

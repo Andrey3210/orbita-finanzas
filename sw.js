@@ -1,4 +1,4 @@
-const version = 'foxio-3';
+const version = 'foxio-4';
 const root = new URL(self.registration.scope);
 const cachePrefix = 'foxio-app:' + root.pathname + ':';
 const cacheName = cachePrefix + version;

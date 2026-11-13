@@ -42,6 +42,6 @@ install.addEventListener('click', async () => {
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(error => {
-    console.warn('foxio no pudo habilitar el acceso sin conexión.', error);
+    console.warn('Miluka no pudo habilitar el acceso sin conexión.', error);
   });
 }

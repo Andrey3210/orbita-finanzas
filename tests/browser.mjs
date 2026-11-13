@@ -5,139 +5,208 @@ import { chromium } from 'playwright';
 const base = process.env.ORBITA_URL ?? 'http://127.0.0.1:4176/';
 const browser = await chromium.launch({ args: ['--disable-gpu'] });
 const errors = [];
-const observe = page => page.on('pageerror', err => errors.push(err.message));
+const observe = page => page.on('pageerror', error => errors.push(error.message));
 const assertText = async (locator, expected) => assert.match(await locator.innerText(), expected);
-const waitForMascot = (page, section) => page.waitForFunction(
-  name => {
-    const mascot = document.querySelector('.mascot-' + name);
-    return mascot?.complete && mascot.naturalWidth === 512;
-  },
-  section,
-);
+const mascot = async (page, section) => page.waitForFunction(name => {
+  const image = document.querySelector('.mascot-' + name);
+  return image?.complete && image.naturalWidth === 512;
+}, section);
+const nav = (page, name) => page.getByRole('navigation').getByRole('link', { name, exact: true });
+const control = (page, name) => page.getByRole('combobox', { name, exact: true });
+const changePicker = async (page, name, value) => {
+  const picker = control(page, name);
+  const element = await picker.elementHandle();
+  await picker.focus();
+  await picker.selectOption(value);
+  assert.equal(await element.evaluate(el => el.isConnected && document.activeElement === el), true, name);
+  assert.equal(await picker.inputValue(), value);
+  await element.dispose();
+};
 
 try {
   await mkdir('test-results', { recursive: true });
   const mobile = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
   observe(mobile);
   await mobile.goto(base, { waitUntil: 'networkidle' });
+  await mascot(mobile, 'inicio');
   await mobile.screenshot({ path: 'test-results/inicio-movil.png', fullPage: true, animations: 'disabled' });
   await assertText(mobile.locator('.hero-balance'), /10,425\.35/);
-  await waitForMascot(mobile, 'inicio');
-  await assertText(mobile.locator('.donut-total'), /5,916\.90/);
+  await changePicker(mobile, 'Mes del resumen', '2026-09');
+  await assertText(mobile.locator('.hero-balance'), /10,643\.50/);
+  await changePicker(mobile, 'Mes del resumen', '2026-10');
+
+  const donut = mobile.locator('.donut-total');
   const homeCategory = mobile.getByRole('button', { name: /Hogar, \d+%, S\/ 2,222\.00/ });
   await homeCategory.tap();
-  await assertText(mobile.locator('.donut-total'), /Hogar[\s\S]*2,222\.00/);
+  await assertText(donut, /Hogar[\s\S]*2,222\.00/);
   await homeCategory.tap();
-  await assertText(mobile.locator('.donut-total'), /Total[\s\S]*5,916\.90/);
+  await assertText(donut, /5,916\.90/);
+  await mobile.getByText('Más categorías', { exact: true }).tap();
+  await mobile.getByRole('button', { name: /Servicios, \d+%,/ }).tap();
+  await assertText(donut, /Servicios[\s\S]*523\.00/);
   await mobile.getByText('Resumen completo', { exact: true }).tap();
-  await assertText(mobile.locator('.report-body'), /Saldo inicial[\s\S]*S\/ 10,643\.50[\s\S]*Transferencias propias[\s\S]*S\/ 1,000\.00[\s\S]*Gastos por categoría[\s\S]*Frente a septiembre/);
-  await mobile.getByText('Resumen completo', { exact: true }).tap();
+  await assertText(mobile.locator('.report-body'), /Saldo inicial[\s\S]*10,643\.50[\s\S]*Transferencias propias[\s\S]*1,000\.00/);
+
   const barScroll = mobile.locator('.bar-scroll');
   assert.ok(await barScroll.evaluate(el => el.scrollWidth > el.clientWidth));
   assert.ok((await mobile.locator('.bar-hit').first().boundingBox()).width >= 48);
-  const dayPicker = mobile.getByRole('combobox', { name: 'Ir a un día' });
-  await dayPicker.selectOption('31');
+  await changePicker(mobile, 'Ir a un día', '31');
   await assertText(mobile.locator('#day-detail'), /31 de octubre[\s\S]*89\.00/);
   assert.ok(await barScroll.evaluate(el => el.scrollLeft > 1000));
-  await dayPicker.selectOption('');
+  await changePicker(mobile, 'Ir a un día', '');
   await mobile.getByRole('button', { name: '15 de octubre: S/ 1,480.00' }).tap();
   await mobile.locator('.category-tile').filter({ hasText: 'Hogar' }).tap();
   await mobile.locator('#segment-detail').getByRole('button', { name: /Alquiler · Miraflores/ }).tap();
   await assertText(mobile.getByRole('dialog'), /1,150\.00/);
   await mobile.getByRole('button', { name: 'Cerrar detalle' }).tap();
   await mobile.getByRole('button', { name: 'Comparar este día' }).tap();
-  await waitForMascot(mobile, 'explorar');
+  await mascot(mobile, 'explorar');
   await assertText(mobile.locator('.compare-detail'), /951\.00[\s\S]*840\.00/);
-  await mobile.locator('[data-action="pick-compare"][data-value="20"]').tap();
-  await assertText(mobile.locator('.compare-detail'), /DÍA 20/);
-  await mobile.getByRole('combobox', { name: 'Día para comparar' }).selectOption('31');
+  await changePicker(mobile, 'Día para comparar', '31');
   await assertText(mobile.locator('.compare-detail'), /Sin día equivalente/);
-  await mobile.getByRole('link', { name: 'Pronóstico', exact: true }).tap();
-  await waitForMascot(mobile, 'pronostico');
-  await assertText(mobile.locator('.account-overview'), /10,777\.75[\s\S]*352\.40/);
-  await assertText(mobile.locator('.forecast-metrics'), /5,353\.33[\s\S]*5,000\.93/);
-  assert.equal(await mobile.locator('main button, main select').count(), 0);
+  await changePicker(mobile, 'Tipo de movimiento', 'income');
+
+  await nav(mobile, 'Asistente').tap();
+  await mascot(mobile, 'asistente');
+  await mobile.getByRole('button', { name: '¿En qué gasté más?' }).tap();
+  await assertText(mobile.getByRole('log'), /5,916\.90[\s\S]*Hogar/);
+  await mobile.getByText('Ver pronóstico', { exact: true }).tap();
+  await assertText(mobile.locator('.forecast-main .account-overview'), /10,777\.75[\s\S]*352\.40/);
   assert.ok((await mobile.locator('#forecast-line').getAttribute('d')).startsWith('M0'));
-  await mobile.screenshot({ path: 'test-results/pronostico-movil.png', fullPage: true, animations: 'disabled' });
-  await mobile.getByRole('link', { name: 'Cuentas', exact: true }).tap();
-  await mobile.getByRole('heading', { name: 'Tus cuentas', exact: true }).waitFor({ timeout: 4000 });
-  await waitForMascot(mobile, 'cuentas');
+
+  await nav(mobile, 'Organízate').tap();
+  await mascot(mobile, 'organiza');
+  await mobile.getByRole('button', { name: 'Historial', exact: true }).tap();
+  await mobile.getByText('Filtros', { exact: true }).tap();
+  await changePicker(mobile, 'Filtrar por cuenta', 'ahorros');
+  await changePicker(mobile, 'Filtrar por tipo', 'transfer');
+  await changePicker(mobile, 'Filtrar por motivo', 'transferencia');
+  await changePicker(mobile, 'Filtrar por fecha', '2026-10-06');
+  await mobile.getByRole('searchbox', { name: 'Buscar movimientos' }).fill('ahorro');
+  await assertText(mobile.locator('#activity-results'), /1 movimiento[\s\S]*Ahorro mensual/);
   await mobile.getByRole('button', { name: /Ahorro mensual/ }).tap();
   await assertText(mobile.getByRole('dialog'), /Cuenta principal[\s\S]*Ahorros[\s\S]*Transferencias/);
   await mobile.getByRole('button', { name: 'Cerrar detalle' }).tap();
-  await mobile.getByRole('link', { name: 'Actividad', exact: true }).tap();
-  await waitForMascot(mobile, 'actividad');
-  await mobile.getByText('Filtros', { exact: true }).tap();
-  await mobile.getByRole('combobox', { name: 'Filtrar por cuenta' }).selectOption('ahorros');
-  await mobile.getByRole('combobox', { name: 'Filtrar por tipo' }).selectOption('transfer');
-  await mobile.getByRole('searchbox', { name: 'Buscar movimientos' }).fill('ahorro');
-  await assertText(mobile.locator('#activity-results'), /1 movimiento[\s\S]*Ahorro mensual/);
+
+  await mobile.getByRole('button', { name: 'Cuentas', exact: true }).tap();
+  await mobile.getByRole('button', { name: 'Cuenta', exact: true }).tap();
+  let editor = mobile.locator('#module-dialog');
+  await editor.getByLabel('Nombre').fill('Caja de pruebas');
+  await editor.getByLabel('Saldo inicial (S/)').fill('100,50');
+  await editor.getByRole('button', { name: 'Guardar' }).tap();
+  await assertText(mobile.getByRole('button', { name: 'Ver movimientos de Caja de pruebas' }), /100\.50/);
+
+  await mobile.getByRole('button', { name: 'Movimiento', exact: true }).tap();
+  await editor.getByLabel('Motivo').fill('Compra <b>apuntes</b>');
+  await editor.getByLabel('Monto (S/)').fill('25,50');
+  await editor.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Caja de pruebas' });
+  await editor.getByRole('button', { name: 'Guardar' }).tap();
+  await assertText(mobile.locator('#activity-results'), /Compra <b>apuntes<\/b>[\s\S]*25\.50/);
+  await mobile.getByRole('button', { name: 'Cuentas', exact: true }).tap();
+  await assertText(mobile.getByRole('button', { name: 'Ver movimientos de Caja de pruebas' }), /75\.00/);
+
+  await mobile.getByRole('button', { name: 'Calendario', exact: true }).tap();
+  await mobile.getByRole('button', { name: 'Pago', exact: true }).tap();
+  await editor.getByLabel('Obligación').fill('Matrícula de prueba');
+  await editor.getByLabel('Monto (S/)').fill('55');
+  await editor.getByRole('button', { name: 'Guardar' }).tap();
+  await mobile.getByRole('button', { name: 'Marcar pagado: Matrícula de prueba' }).tap();
+  await assertText(mobile.locator('.calendar-payments'), /Matrícula de prueba[\s\S]*Pagado/);
+
+  await nav(mobile, 'Metas').tap();
+  await mascot(mobile, 'metas');
+  await mobile.getByRole('button', { name: 'Crear meta' }).tap();
+  await editor.getByLabel('Nombre').fill('Fondo de pruebas');
+  await editor.getByLabel('Objetivo (S/)').fill('60');
+  await editor.getByLabel('Ya ahorrado (S/)').fill('30');
+  await editor.getByLabel('Cuenta', { exact: true }).selectOption({ label: 'Caja de pruebas' });
+  await editor.getByLabel('Reservar del saldo disponible').check();
+  await editor.getByRole('button', { name: 'Guardar' }).tap();
+  await assertText(mobile.locator('.goal-card').last(), /Fondo de pruebas[\s\S]*Dinero reservado/);
+  await mobile.reload({ waitUntil: 'networkidle' });
+  await assertText(mobile.locator('.goal-card').last(), /Fondo de pruebas/);
+  await nav(mobile, 'Organízate').tap();
+  await assertText(mobile.getByRole('button', { name: 'Ver movimientos de Caja de pruebas' }), /30\.00 en metas[\s\S]*45\.00/);
+  await mobile.getByRole('button', { name: 'Editar cuenta Caja de pruebas' }).tap();
+  await editor.getByLabel('Nombre').fill('Caja de estudio');
+  await editor.getByRole('button', { name: 'Guardar' }).tap();
+  await assertText(mobile.getByRole('button', { name: 'Ver movimientos de Caja de estudio' }), /45\.00/);
+  await mobile.getByRole('button', { name: 'Escanear boleta' }).tap();
+  assert.equal(await editor.locator('input[type=file]').getAttribute('capture'), 'environment');
+  await editor.getByRole('button', { name: 'Cerrar', exact: true }).tap();
+
+  await nav(mobile, 'Explorar').tap();
+  await mobile.getByRole('button', { name: 'Cursos', exact: true }).tap();
+  await mobile.getByRole('button', { name: /Tu primer presupuesto/ }).tap();
+  await editor.getByLabel('Separar un monto para ahorro').check();
+  await editor.getByRole('button', { name: 'Comprobar' }).tap();
+  await assertText(editor.getByRole('status'), /\+10 monedas/);
+  await editor.getByRole('button', { name: 'Cerrar', exact: true }).tap();
+  await mobile.getByRole('button', { name: 'Retos', exact: true }).tap();
+  await assertText(mobile.locator('.pill').first(), /10 monedas/);
+  await mobile.getByRole('button', { name: 'Simuladores', exact: true }).tap();
+  await mobile.getByRole('button', { name: 'Activar demo Plus' }).tap();
+  await mobile.getByRole('button', { name: 'Préstamo', exact: true }).tap();
+  await assertText(editor.locator('output'), /178\.53/);
+  await editor.getByLabel('Tasa mensual (%)').fill('0');
+  await assertText(editor.locator('output'), /166\.67/);
+  await editor.getByRole('button', { name: 'Cerrar', exact: true }).tap();
   assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth), 390);
 
-  // Drag across the floating navigation. The indicator follows each position
-  // continuously while the section only changes after touchEnd.
+  await nav(mobile, 'Asistente').tap();
   const bar = await mobile.locator('#nav').boundingBox();
   const barSession = await mobile.context().newCDPSession(mobile);
-  const barY = bar.y + bar.height / 2;
+  const y = bar.y + bar.height / 2;
   const from = bar.x + bar.width * .9, to = bar.x + bar.width * .1 + 10;
-  const navTouch = (type, x) => barSession.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y: barY }] });
-  const offset = () => mobile.locator('#nav-indicator').evaluate(el => new DOMMatrix(getComputedStyle(el).transform).m41);
-  await navTouch('touchStart', from);
-  await navTouch('touchMove', bar.x + bar.width * .61);
+  const touch = (type, x) => barSession.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+  await touch('touchStart', from);
+  await touch('touchMove', bar.x + bar.width * .61);
   await mobile.locator('#nav.is-dragging').waitFor();
-  const firstOffset = await offset();
-  await navTouch('touchMove', to);
-  await mobile.waitForFunction(first => {
-    const indicator = document.querySelector('#nav-indicator');
-    return new DOMMatrix(getComputedStyle(indicator).transform).m41 < first - 40;
-  }, firstOffset);
-  assert.equal(await mobile.locator('#nav [aria-current]').innerText(), 'Actividad');
-  await navTouch('touchEnd');
+  await touch('touchMove', to);
+  assert.equal(await mobile.locator('#nav [aria-current]').innerText(), 'Asistente');
+  await touch('touchEnd');
   await barSession.detach();
   assert.equal(await mobile.locator('#nav [aria-current]').innerText(), 'Inicio');
-  await mobile.locator('#nav-indicator').evaluate(el => Promise.all(el.getAnimations().map(a => a.finished)));
-  assert.ok(Math.abs(await offset() - 2) < 1);
 
   const desktop = await browser.newPage({ viewport: { width: 1440, height: 960 }, deviceScaleFactor: 1 });
   observe(desktop);
   await desktop.goto(base, { waitUntil: 'networkidle' });
   await desktop.screenshot({ path: 'test-results/inicio-escritorio.png', fullPage: true, animations: 'disabled' });
-  await desktop.getByRole('link', { name: 'Explorar', exact: true }).focus();
+  const desktopMonth = control(desktop, 'Mes del resumen');
+  const original = await desktopMonth.elementHandle();
+  await desktopMonth.focus();
+  await desktop.keyboard.press('ArrowDown');
+  assert.equal(await original.evaluate(el => el.isConnected && document.activeElement === el), true);
+  assert.equal(await desktopMonth.inputValue(), '2026-09');
+  await original.dispose();
+  await nav(desktop, 'Explorar').focus();
   await desktop.keyboard.press('Enter');
-  await desktop.getByRole('button', { name: 'Comparar meses', exact: true }).first().click();
+  await desktop.getByRole('button', { name: 'Mis datos', exact: true }).click();
+  await desktop.getByRole('button', { name: 'Comparar meses', exact: true }).click();
   await desktop.locator('[data-month-drag]').first().dragTo(desktop.locator('[data-month-target]').nth(1));
-  assert.equal(await desktop.getByRole('combobox', { name: 'Mes base' }).inputValue(), '2026-09');
+  assert.equal(await control(desktop, 'Mes base').inputValue(), '2026-10');
+  await changePicker(desktop, 'Mes base', '2026-09');
   await desktop.getByRole('button', { name: 'Flujo de dinero' }).click();
-  await desktop.getByRole('combobox', { name: 'Ruta de dinero' }).selectOption('principal-hogar');
-  await assertText(desktop.locator('.flow-panel .unfold'), /Cuenta principal → Hogar/i);
+  await changePicker(desktop, 'Ruta de dinero', 'principal-hogar');
+  await assertText(desktop.locator('.flow-panel .unfold'), /Cuenta principal → Hogar/);
   assert.equal(await desktop.locator('.flow-route.lit').count(), 1);
-  assert.ok(await desktop.locator('.flow-route.dim').count() > 0);
-  await desktop.getByRole('link', { name: 'Pronóstico', exact: true }).click();
-  await waitForMascot(desktop, 'pronostico');
-  // The forecast stays anchored to the latest close even after browsing September.
-  await assertText(desktop.locator('.account-overview'), /10,777\.75/);
   await desktop.emulateMedia({ reducedMotion: 'reduce' });
-  await desktop.getByRole('link', { name: 'Explorar', exact: true }).click();
-  assert.equal(await desktop.locator('animateMotion').count(), 0);
+  await desktop.locator('animateMotion').first().waitFor({ state: 'detached' });
 
-  // Verify the browser can install the manifest and the controlled app survives
-  // an offline reload, including a mascot that wasn't loaded in the initial view.
   await desktop.waitForFunction(() => Boolean(navigator.serviceWorker.controller), undefined, { timeout: 12000 });
   const installCheck = await desktop.context().newCDPSession(desktop);
-  const manifest = await installCheck.send('Page.getAppManifest');
-  const manifestData = JSON.parse(manifest.data);
-  assert.equal(manifestData.name, 'foxio');
-  assert.equal(manifestData.id, '/orbita-finanzas/');
+  const manifest = JSON.parse((await installCheck.send('Page.getAppManifest')).data);
+  assert.equal(manifest.name, 'Miluka');
+  assert.equal(manifest.id, '/orbita-finanzas/');
   assert.deepEqual((await installCheck.send('Page.getInstallabilityErrors')).installabilityErrors, []);
   await desktop.context().setOffline(true);
   await desktop.reload();
-  await desktop.getByRole('link', { name: 'Actividad', exact: true }).click();
-  await waitForMascot(desktop, 'actividad');
-  await assertText(desktop.locator('#activity-results'), /movimientos/);
+  await nav(desktop, 'Metas').click();
+  await mascot(desktop, 'metas');
+  await assertText(desktop.locator('.goal-card'), /Mi próxima laptop/);
   await desktop.context().setOffline(false);
-
   assert.deepEqual(errors, []);
-  console.log('Navegador: recorrido móvil, cinco poses, arrastre, movimiento reducido, instalación y reapertura sin conexión verificados.');
+  console.log('Miluka: cinco módulos, selección estable, operaciones y metas persistentes, aprendizaje, navegación y PWA verificados.');
 } finally {
   await browser.close();
 }

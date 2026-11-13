@@ -1,26 +1,23 @@
-# foxio · Finanzas personales
+# Miluka · Finanzas personales
 
-Prototipo web en español para explorar cuentas, gastos, ingresos y transferencias ficticias en soles. Incluye datos de septiembre y octubre de 2026 y un pronóstico para noviembre calculado a partir de ese historial.
+Prototipo web en español para organizar tus finanzas, explorar gastos y practicar con retos. Incluye un historial inicial de septiembre y octubre de 2026. Las cuentas, operaciones, pagos, metas y el progreso se guardan en el almacenamiento del navegador.
 
 ## Cómo probarlo
 
-En Inicio, toca una categoría de la dona para ver su total. Desliza las barras o usa **Ir a un día** para encontrar una fecha. Debajo de los gráficos, **Resumen completo** reúne los saldos por cuenta, el flujo del mes y el desglose de gastos.
-
-1. En **Inicio**, toca la columna o la etiqueta del **15 de octubre**. El pico suma **S/ 1,480.00**.
-2. Abre **Hogar** y selecciona **Alquiler · Miraflores** para ver el movimiento de **S/ 1,150.00**.
-3. Cierra el detalle y toca **Comparar este día**. Octubre supera a septiembre por **S/ 951.00** ese día. **Hogar** aporta **S/ 840.00** a la diferencia.
-4. En **Pronóstico**, el saldo estimado al cierre de noviembre es **S/ 10,777.75**. El cálculo parte del saldo consolidado de octubre y promedia los ingresos y gastos de ambos meses, con doble peso para octubre. Excluye las transferencias propias y agrupa el día 31 en el último día de noviembre.
-
-En **Explorar → Flujo de dinero**, elige una ruta desde el diagrama o desde el selector para ver su total y sus movimientos. En **Cuentas**, las transferencias propias salen de una cuenta y entran en otra; no se cuentan como ingreso ni gasto. En **Actividad**, puedes combinar mes, cuenta, tipo y búsqueda.
+- **Inicio.** Toca el pico del 15 de octubre, abre Hogar y consulta el alquiler de S/ 1,150.00. «Comparar» abre el mismo día en septiembre. «Más categorías» y «Resumen completo» amplían el detalle.
+- **Organízate.** Agrega o renombra cuentas, registra ingresos, gastos o transferencias y filtra el historial por fecha, cuenta, tipo y motivo. En Calendario puedes programar pagos y marcarlos como realizados. El botón flotante escanea una foto en el navegador y permite revisar los campos antes de guardar. La primera descarga del motor de reconocimiento requiere conexión.
+- **Explorar.** Abre rutas, cursos, diagnóstico, retos, recompensas y enlaces de actualidad. «Mis datos» agrupa las gráficas, comparaciones y el flujo de gastos. La demo Plus abre seis calculadoras educativas.
+- **Metas.** Registra el objetivo, el monto acumulado y la fecha. Al reservar el ahorro, el saldo disponible disminuye y el saldo total conserva el monto.
+- **Asistente.** Consulta el saldo, gastos, ingresos, pagos o metas. El pronóstico se abre al pie del chat y usa los dos últimos periodos con doble peso para el más reciente. Las consultas de texto abiertas y la generación de retos usan la IA local de navegadores compatibles con un modelo disponible. La demo Plus ofrece dictado y lectura en los navegadores que soportan esas funciones.
 
 ## Instalar en el teléfono
 
-Abre foxio y toca **Instalar**. En iPhone, usa Safari y elige **Compartir → Agregar a pantalla de inicio**. Activa **Abrir como app web** si aparece. En Android, Chrome puede mostrar el aviso de instalación. También puedes abrir el menú de Chrome y elegir **Instalar y crear acceso directo → Instalar**. Abre la app una vez con conexión para que guarde los datos de demostración y las pantallas.
+En iPhone, abre la app en Safari y elige **Compartir → Agregar a pantalla de inicio**. En Android, abre Chrome y elige **Instalar** desde el menú o desde la app. Ábrela una vez con conexión para que pueda cargar sus pantallas sin internet.
 
 ## Desarrollo
 
-- `npm run dev`: abre el sitio local en `http://127.0.0.1:4176/`.
-- `npm test`: verifica saldos, transferencias, el pico, la comparación y el pronóstico.
-- Para repetir la prueba de navegador: instala Playwright con `npm install --no-save --package-lock=false playwright`, ejecuta `npx playwright install chromium`, inicia el servidor y ejecuta `node tests/browser.mjs`.
+- `npm run dev` sirve el sitio local en `http://127.0.0.1:4176/`.
+- `npm test` verifica los cálculos financieros.
+- Para la prueba de navegador, instala Playwright con `npm install --no-save --package-lock=false playwright`, ejecuta `npx playwright install chromium`, inicia el servidor y ejecuta `node tests/browser.mjs`.
 
-GitHub Pages publica la raíz de `main`. La app usa rutas relativas para los archivos y fragmentos para navegar entre secciones. Las cifras se calculan en céntimos enteros. Las interacciones tienen controles de teclado y respetan la preferencia de movimiento reducido.
+GitHub Pages publica la raíz de `main`. Las rutas son relativas y los módulos se abren con fragmentos. Los importes se calculan en céntimos enteros. La aplicación respeta el movimiento reducido y conserva los controles nativos de teclado.

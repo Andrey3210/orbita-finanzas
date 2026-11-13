@@ -1,17 +1,17 @@
 export const accounts = [
-  { id: 'principal', label: 'Cuenta principal', short: 'Principal', icon: 'wallet', opening: 2900, color: '#edb181', suffix: '4821' },
-  { id: 'ahorros', label: 'Ahorros', short: 'Ahorros', icon: 'vault', opening: 4350, color: '#f5ddc5', suffix: '0624' },
-  { id: 'digital', label: 'Billetera digital', short: 'Digital', icon: 'card', opening: 1900, color: '#d49a5d', suffix: '2190' },
+  { id: 'principal', label: 'Cuenta principal', short: 'Principal', icon: 'wallet', opening: 2900, color: '#b86243', suffix: '4821' },
+  { id: 'ahorros', label: 'Ahorros', short: 'Ahorros', icon: 'vault', opening: 4350, color: '#5e9a7c', suffix: '0624' },
+  { id: 'digital', label: 'Billetera digital', short: 'Digital', icon: 'card', opening: 1900, color: '#ca963e', suffix: '2190' },
 ];
 
 export const categories = {
-  hogar: { label: 'Hogar', color: '#edb181', icon: 'home' },
-  comida: { label: 'Comida', color: '#f5ddc5', icon: 'food' },
-  transporte: { label: 'Transporte', color: '#d49a5d', icon: 'compass' },
-  ocio: { label: 'Ocio', color: '#e5a097', icon: 'spark' },
-  servicios: { label: 'Servicios', color: '#c18471', icon: 'bolt' },
-  ingreso: { label: 'Ingresos', color: '#edb181', icon: 'arrowDown' },
-  transferencia: { label: 'Entre tus cuentas', color: '#edb181', icon: 'transfer' },
+  hogar: { label: 'Hogar', color: '#b86243', icon: 'home' },
+  comida: { label: 'Comida', color: '#5e9a7c', icon: 'food' },
+  transporte: { label: 'Transporte', color: '#ca963e', icon: 'compass' },
+  ocio: { label: 'Ocio', color: '#a77f8f', icon: 'spark' },
+  servicios: { label: 'Servicios', color: '#67888a', icon: 'bolt' },
+  ingreso: { label: 'Ingresos', color: '#b86243', icon: 'arrowDown' },
+  transferencia: { label: 'Entre tus cuentas', color: '#b86243', icon: 'transfer' },
 };
 export const expenses = Object.keys(categories).slice(0, 5);
 export const months = {
@@ -20,6 +20,17 @@ export const months = {
 };
 export const latest = '2026-10';
 export const previous = '2026-09';
+export function period(key) {
+  const [year, month] = key.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1, 1));
+  const name = new Intl.DateTimeFormat('es-PE', { month: 'long', timeZone: 'UTC' }).format(date);
+  return { label: name[0].toUpperCase() + name.slice(1), short: name.slice(0, 3), days: new Date(Date.UTC(year, month, 0)).getUTCDate() };
+}
+
+export function shiftMonth(key, offset) {
+  const [year, month] = key.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1 + offset, 1)).toISOString().slice(0, 7);
+}
 const records = {
   '2026-09': [
     [1, 'principal', 'ingreso', 3900, 'Sueldo · Estudio Boreal'], [1, 'digital', 'comida', 62, 'Mercado del barrio'],
@@ -67,14 +78,30 @@ export const movements = Object.entries(records).flatMap(([month, list]) => list
     kind: category === 'ingreso' ? 'income' : category === 'transferencia' ? 'transfer' : 'expense',
   }),
 ));
+
+const initialAccounts = accounts.slice();
+const initialMovements = movements.slice();
+export function loadLedger(data) {
+  const entries = [...initialAccounts, ...data.accounts].map(account => {
+    const label = data.accountNames?.[account.id];
+    return label ? { ...account, label, short: label } : account;
+  });
+  accounts.splice(0, accounts.length, ...entries);
+  movements.splice(0, movements.length, ...initialMovements, ...data.movements);
+  for (const key of Object.keys(months)) if (key !== latest && key !== previous) delete months[key];
+  for (const { month } of movements) months[month] ??= period(month);
+  for (const { created } of accounts) if (created) months[created] ??= period(created);
+}
+
+export const newestMonth = () => Object.keys(months).sort().at(-1);
 export const money = cents => 'S/ ' + new Intl.NumberFormat('en-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(cents) / 100);
 export const signed = cents => (cents < 0 ? '−' : cents > 0 ? '+' : '') + money(cents);
 export const sum = list => list.reduce((n, item) => n + item.cents, 0);
 export const monthMovements = month => movements.filter(m => m.month === month);
 export const byDay = (month, day, kind = 'expense') => movements.filter(m => m.month === month && m.day === day && m.kind === kind);
 export const totals = month => Object.fromEntries(['income', 'expense', 'transfer'].map(kind => [kind, sum(monthMovements(month).filter(m => m.kind === kind))]));
-export function balances(through = latest) {
-  const result = Object.fromEntries(accounts.map(a => [a.id, a.opening * 100]));
+export function balances(through = newestMonth()) {
+  const result = Object.fromEntries(accounts.map(a => [a.id, a.created && a.created > through ? 0 : (a.openingCents ?? a.opening * 100)]));
   for (const m of movements.filter(m => m.month <= through)) {
     result[m.account] += m.kind === 'income' ? m.cents : -m.cents;
     if (m.kind === 'transfer') result[m.to] += m.cents;
@@ -96,11 +123,11 @@ export function monthlyReport(month) {
   const closing = portfolio(month);
   const outflows = entries.filter(m => m.kind === 'expense');
   const byCategory = groups(outflows);
-  const earlier = Object.keys(months).filter(key => key < month).sort().at(-1);
+  const earlier = shiftMonth(month, -1);
   return {
     ...figures, net, opening: closing - net, closing, accountBalances: balances(month),
     entries: entries.length, byCategory,
-    earlier, prior: earlier ? totals(earlier) : null,
+    earlier: months[earlier] ? earlier : null, prior: months[earlier] ? totals(earlier) : null,
   };
 }
 export function compareDay(a, b, day, kind = 'expense') {
@@ -117,7 +144,7 @@ export function routes(month) {
     .map(g => ({ ...g, account: a.id, id: a.id + '-' + g.category })));
 }
 
-export function predictNextMonth(through = latest) {
+export function predictNextMonth(through = newestMonth()) {
   const history = Object.keys(months).filter(month => month <= through).sort().slice(-2);
   if (!history.length) return null;
   const lastMonth = history.at(-1);

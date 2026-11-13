@@ -1,5 +1,5 @@
 {
-  "name": "foxio",
+  "name": "miluka",
   "private": true,
   "type": "module",
   "scripts": { "test": "node --test tests/*.test.js", "dev": "node tests/serve.mjs" }

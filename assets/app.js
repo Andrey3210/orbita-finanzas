@@ -1,8 +1,8 @@
-import { accounts, categories, expenses, months, newestMonth, period, shiftMonth, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=miluka-1';
-import { icon } from './icons.js?v=miluka-1';
-import { createNavigation } from './navigation.js?v=miluka-1';
-import { localDate, reserved, syncPersonal } from './personal.js?v=miluka-1';
-import { createModules, escapeText } from './modules.js?v=miluka-1';
+import { accounts, categories, expenses, months, newestMonth, period, shiftMonth, movements, money, signed, sum, monthMovements, byDay, monthlyReport, balances, portfolio, daily, groups, compareDay, routes, predictNextMonth } from './model.js?v=miluka-2';
+import { icon } from './icons.js?v=miluka-2';
+import { createNavigation } from './navigation.js?v=miluka-2';
+import { localDate, reserved, syncPersonal } from './personal.js?v=miluka-2';
+import { createModules, escapeText } from './modules.js?v=miluka-2';
 
 const sections = [
   ['inicio', 'Inicio', 'home', 'apricot'], ['organiza', 'Organízate', 'wallet', 'honey'], ['explorar', 'Explorar', 'compass', 'orange'],
@@ -16,7 +16,7 @@ function getSection() {
 }
 const state = {
   section: getSection(), month: newestMonth(), day: 15, kind: 'expense', opened: false, category: null,
-  tab: 'days', explore: 'rutas', organize: location.hash === '#actividad' ? 'historial' : 'cuentas',
+  tab: 'days', explore: 'retos', organize: location.hash === '#actividad' ? 'historial' : 'cuentas',
   selectedRoute: null, spendingCategory: null, calendarMonth: localDate().slice(0, 7),
   filter: { account: '', kind: '', search: '', category: '', date: '' }, reportOpen: false,
 };
@@ -51,10 +51,13 @@ const heading = (title, extra = '', summary = '') => {
   return `<header class="section-heading section-banner tone-${color}"><div class="section-banner-copy"><h1>${title}</h1>${summary}${extra}</div><div class="section-portrait">${mascot(id)}</div></header>`;
 };
 const badgeIcon = glyph => `<span class="badge-icon">${icon(glyph, 19)}</span>`;
+const axisStep = target => {
+  const magnitude = 10 ** Math.floor(Math.log10(Math.max(1, target)));
+  return Math.ceil([1, 2, 2.5, 5, 10].find(step => step * magnitude >= target) * magnitude);
+};
 const plotScale = kind => {
   const max = Math.max(...Object.keys(months).map(m => Math.max(...daily(m, kind)))) / 100;
-  const step = max > 6000 ? Math.ceil(max / 4000) * 1000 : max > 2000 ? 1500 : max > 800 ? 400 : 200;
-  return Math.max(1, Math.ceil(max / (step * 4))) * step * 4 * 100;
+  return axisStep(max / 4) * 400;
 };
 
 nav.insertAdjacentHTML('beforeend', sections.map(([id, label, glyph, color]) => `<a class="nav-link tone-${color}" href="#${id}" data-nav="${id}" draggable="false"><span class="nav-glyph">${icon(glyph, 22)}</span><span>${label}</span></a>`).join(''));
@@ -62,7 +65,7 @@ const navigation = createNavigation(nav, main, state.section, navigate);
 
 const metric = (title, value, glyph, color, tone = '') => `<div class="metric">
   <span class="metric-icon tone-${color}">${icon(glyph, 17)}</span><div><span>${title}</span><strong class="${tone}">${value}</strong></div></div>`;
-const mascot = section => `<img class="mascot mascot-${section}" src="./assets/miluka-${section}.webp?v=miluka-1" width="512" height="512" alt="" draggable="false">`;
+const mascot = section => `<img class="mascot mascot-${section}" src="./assets/miluka-${section}.webp?v=miluka-2" width="512" height="512" alt="" draggable="false">`;
 const modules = createModules({ main, state, action, icon, select, heading, monthName, render, navigate, forecastView });
 
 function home() {
@@ -352,7 +355,7 @@ function forecastView() {
   const days = series.length - 1;
   const amounts = series.map(point => point.balance);
   const low = Math.min(...amounts), high = Math.max(...amounts);
-  const step = Math.max(50000, Math.ceil((high - low) / 200000) * 50000);
+  const step = axisStep((high - low) / 400) * 100;
   const floor = Math.floor(low / step) * step;
   const ceiling = Math.max(floor + step, Math.ceil(high / step) * step);
   const ticks = Array.from({ length: (ceiling - floor) / step + 1 }, (_, i) => ceiling - i * step);

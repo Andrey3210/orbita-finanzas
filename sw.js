@@ -1,4 +1,4 @@
-const version = 'miluka-1';
+const version = 'miluka-2';
 const root = new URL(self.registration.scope);
 const cachePrefix = 'foxio-app:' + root.pathname + ':';
 const cacheName = cachePrefix + version;

@@ -127,6 +127,39 @@ body { background: radial-gradient(ellipse at 94% 0, #e4efe1 0%, transparent 58%
 .learning-grid .block { margin-top: 0; }
 .learning-route { order: var(--route-order); }
 .pill { font-size: 12px; font-weight: 750; border-radius: 99px; padding: 4px 9px; color: var(--green); background: var(--mint); white-space: nowrap; }
+.game-wallet {
+  display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 5px 15px; align-items: center;
+  margin-top: var(--tile-gap); padding: var(--tile-padding); border-radius: var(--tile-radius);
+  color: #523726; background: linear-gradient(115deg,#f8e7cb,#f2d4a3);
+}
+.game-wallet h2 { font-size: 17px; }
+.game-wallet p { font-weight: 700; }
+.game-wallet p > strong { font: 700 clamp(44px,10vw,61px)/1.12 var(--heading); font-variant-numeric: tabular-nums; }
+.wallet-glyph { display: grid; place-items: center; width: 62px; aspect-ratio: 1; border-radius: 50%; background: #fcebd0; color: #8c5420; }
+.coin-history { grid-column: 1 / -1; }
+.coin-history summary, .game-more summary {
+  display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: 8px;
+  color: var(--brand); font-weight: 700; font-size: 14px; cursor: pointer; list-style: none;
+}
+.coin-history summary::-webkit-details-marker, .game-more summary::-webkit-details-marker { display: none; }
+.coin-history[open] summary svg, .game-more[open] summary svg { transform: rotate(180deg); }
+.coin-history ul { list-style: none; margin: 0; padding: 0; }
+.coin-history li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid #d9bb91; font-size: 14px; }
+.coin-history p { font-size: 14px; font-weight: 500; }
+.challenge-row {
+  display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 10px;
+  min-height: 71px; padding: 9px 0; border-bottom: 1px solid var(--edge);
+}
+.challenge-row small { display: block; font-size: 13px; color: var(--muted); }
+.challenge-row progress { display: block; width: min(100%, 220px); height: 7px; margin-top: 6px; accent-color: var(--green); }
+.course-status { color: var(--brand); font-weight: 750; font-size: 14px; }
+.quiz-result {
+  text-align: center; padding: 17px; border-radius: 15px; background: var(--mint);
+  animation: unfold .3s var(--ease) both;
+}
+.quiz-result strong { font: 700 45px/1 var(--heading); color: var(--green); }
+.quiz-result-action { width: 100%; margin-top: 10px; }
+.coin-earned { color: var(--green); font-weight: 800; }
 .news-card small { color: var(--muted); }
 .news-card h2 { margin: 5px 0 12px; }
 .news-card a, .lesson-resource { display: inline-flex; align-items: center; gap: 6px; color: var(--brand); font-weight: 700; margin-top: 10px; }
@@ -167,6 +200,7 @@ body { background: radial-gradient(ellipse at 94% 0, #e4efe1 0%, transparent 58%
 
 @media (min-width: 1100px) {
   .goal-grid, .learning-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .challenge-grid > section:first-child { grid-row: span 2; }
 }
 
 @media (min-width: 761px) {

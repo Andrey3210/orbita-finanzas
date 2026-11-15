@@ -21,6 +21,34 @@ export const lessons = [
     options: ['S/ 100', 'S/ 210', 'S/ 110'], answer: 2 },
 ];
 
+const extraQuestions = {
+  presupuesto: [
+    { question: 'Ingresan S/ 700 y separas S/ 480 para gastos necesarios. ¿Cuánto queda?', options: ['S/ 180', 'S/ 220', 'S/ 280'], answer: 1 },
+    { question: '¿Dónde registrarías la recarga de tu tarjeta del Metropolitano?', options: ['Transporte', 'Ingreso', 'Ahorro'], answer: 0 },
+  ],
+  ahorro: [
+    { question: 'Tu meta cuesta S/ 350 y ya tienes S/ 110. ¿Cuánto te falta?', options: ['S/ 460', 'S/ 110', 'S/ 240'], answer: 2 },
+    { question: '¿Cuál de estas metas puedes medir y planificar?', options: ['Ahorrar S/ 30 al mes durante seis meses', 'Guardar algo algún día', 'Comprar más cosas'], answer: 0 },
+  ],
+  credito: [
+    { question: 'Te prestan S/ 500 y devuelves S/ 560 en total. ¿Cuánto cuesta el crédito?', options: ['S/ 60', 'S/ 500', 'S/ 1,060'], answer: 0 },
+    { question: 'Dos créditos te entregan el mismo monto. ¿Qué cargo debes incluir para compararlos?', options: ['Solo la cuota inicial', 'Comisiones y seguros obligatorios', 'Solo los intereses del primer mes'], answer: 1 },
+  ],
+  interes: [
+    { question: 'Si ahorras S/ 200 al 5% anual, ¿cuál es el saldo tras el primer año?', options: ['S/ 205', 'S/ 210', 'S/ 220'], answer: 1 },
+    { question: '¿Sobre qué monto se calcula el interés compuesto del segundo año?', options: ['Solo sobre el capital inicial', 'Sobre el capital y el interés acumulado', 'Solo sobre el interés del primer año'], answer: 1 },
+  ],
+};
+export const quizFor = course => [course, ...extraQuestions[course.id]];
+export const passingScore = 2;
+export const courseCoins = 20;
+
+export const milestones = [
+  { id: 'primer-curso', title: 'Primer paso', description: 'Aprueba 1 curso', target: 1, coins: 5, progress: learning => lessons.filter(course => learning.completed.includes(course.id)).length },
+  { id: 'tres-cursos', title: 'En racha', description: 'Aprueba 3 cursos', target: 3, coins: 15, progress: learning => lessons.filter(course => learning.completed.includes(course.id)).length },
+  { id: 'quiz-perfecto', title: 'Puntaje perfecto', description: 'Consigue 3 de 3 en un quiz', target: 3, coins: 10, progress: learning => Math.max(0, ...Object.values(learning.quizScores)) },
+];
+
 export const challenges = [
   { id: 'necesidades', title: 'Reto · Primero lo necesario', question: 'Tienes S/ 60 hasta fin de semana. ¿Qué pago conviene apartar primero?',
     options: ['S/ 20 de pasajes a clases', 'S/ 55 para una salida', 'S/ 50 para un juego'], answer: 0,
@@ -50,3 +78,71 @@ export const simulations = {
   inversiones: { label: 'Inversiones', result: 'Capital al final', fields: [['Capital (S/)', 1000], ['Tasa anual (%)', 5], ['Años', 3]], calc: (a, b, c) => a * (1 + b / 100) ** c, note: 'Capitalización anual, sin comisiones.' },
   negocio: { label: 'Emprendimiento', result: 'Margen estimado', fields: [['Precio por unidad (S/)', 20], ['Costo por unidad (S/)', 12], ['Unidades', 50]], calc: (a, b, c) => (a - b) * c, note: 'Antes de costos fijos.' },
 };
+
+export const simulationRequirements = {
+  tarjeta: { course: 'credito', cost: 15 },
+  prestamo: { course: 'credito', cost: 20 },
+  presupuesto: { course: 'presupuesto', cost: 10 },
+  impuestos: { course: 'presupuesto', cost: 15 },
+  inversiones: { course: 'interes', cost: 25 },
+  negocio: { course: 'ahorro', cost: 15 },
+};
+
+export function restoreLearning(learning) {
+  learning.quizScores ??= {};
+  learning.unlocked ??= [];
+  learning.milestones ??= milestones.filter(item => item.progress(learning) >= item.target).map(item => item.id);
+  learning.history ??= learning.coins > 0 ? [{ label: 'Saldo anterior', change: learning.coins }] : [];
+}
+
+function moveCoins(learning, label, change) {
+  learning.coins += change;
+  learning.history.push({ label, change });
+}
+
+export function gradeCourse(learning, course, answers) {
+  const quiz = quizFor(course);
+  const score = quiz.filter((item, index) => answers[index] === item.answer).length;
+  const passed = score >= passingScore;
+  const previousBalance = learning.coins;
+  learning.quizScores[course.id] = Math.max(learning.quizScores[course.id] ?? 0, score);
+  if (passed && !learning.completed.includes(course.id)) {
+    learning.completed.push(course.id);
+    moveCoins(learning, course.title, courseCoins);
+  }
+  for (const item of milestones) {
+    if (learning.milestones.includes(item.id) || item.progress(learning) < item.target) continue;
+    learning.milestones.push(item.id);
+    moveCoins(learning, item.title, item.coins);
+  }
+  return { score, passed, total: quiz.length, earned: learning.coins - previousBalance };
+}
+
+export function completeChallenge(learning, item) {
+  if (learning.completed.includes(item.id)) return 0;
+  learning.completed.push(item.id);
+  moveCoins(learning, item.title, 10);
+  return 10;
+}
+
+export function simulationStatus(learning, id) {
+  const { course, cost } = simulationRequirements[id];
+  if (learning.unlocked.includes(id)) return 'unlocked';
+  if (!learning.completed.includes(course)) return 'course';
+  if (learning.coins < cost) return 'coins';
+  return 'available';
+}
+
+export function redeemSimulation(learning, id) {
+  if (simulationStatus(learning, id) !== 'available') return false;
+  learning.unlocked.push(id);
+  moveCoins(learning, simulations[id].label, -simulationRequirements[id].cost);
+  return true;
+}
+
+export function redeemBadge(learning, reward) {
+  if (learning.badges.includes(reward.id) || learning.coins < reward.cost) return false;
+  learning.badges.push(reward.id);
+  moveCoins(learning, reward.label, -reward.cost);
+  return true;
+}

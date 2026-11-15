@@ -1,6 +1,6 @@
-import { accounts, categories, expenses, monthlyReport, months, money, newestMonth, period, predictNextMonth, shiftMonth, signed } from './model.js?v=miluka-1';
-import { saveAccount, addGoal, addMovement, asCents, localDate, nameFrom, personal, requiredDate, reserved, updatePersonal } from './personal.js?v=miluka-1';
-import { challenges, lessons, news, rewards, simulations } from './learning.js?v=miluka-1';
+import { accounts, categories, expenses, monthlyReport, months, money, newestMonth, period, predictNextMonth, shiftMonth, signed } from './model.js?v=miluka-2';
+import { saveAccount, addGoal, addMovement, asCents, localDate, nameFrom, personal, requiredDate, reserved, updatePersonal } from './personal.js?v=miluka-2';
+import { challenges, completeChallenge, courseCoins, gradeCourse, lessons, milestones, news, passingScore, quizFor, redeemBadge, redeemSimulation, rewards, simulationRequirements, simulations, simulationStatus } from './learning.js?v=miluka-2';
 
 export const escapeText = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const localMoney = cents => signed(cents).replace(/^\+/, '');
@@ -13,12 +13,14 @@ const levels = ['Principiante', 'Intermedio', 'Avanzado'];
 const lessonAndGames = [...lessons, ...challenges];
 const prompts = ['¿En qué gasté más?', '¿Cuánto puedo usar?', '¿Qué pagos se acercan?'];
 const findActivity = (id, data = personal) => lessonAndGames.find(item => item.id === id) ?? (data.learning.generated?.id === id ? data.learning.generated : undefined);
+const courseById = id => lessons.find(course => course.id === id);
+const coinLabel = amount => amount + (amount === 1 ? ' moneda' : ' monedas');
 
 export function createModules({ main, state, action, icon, select, heading, monthName, render, navigate, forecastView }) {
   const editor = document.querySelector('#module-dialog');
   const tabs = (name, group, items) => `<div class="view-tabs module-tabs" aria-label="${name}">${items.map(([value, label]) => `<button ${action(group, value)} aria-pressed="${state[group] === value}">${label}</button>`).join('')}</div>`;
   const organizeTabs = () => tabs('Vistas de Organízate', 'organize', [['cuentas', 'Cuentas'], ['historial', 'Historial'], ['calendario', 'Calendario']]);
-  const exploreTabs = () => tabs('Vistas de Explorar', 'explore', [['rutas', 'Rutas'], ['cursos', 'Cursos'], ['retos', 'Retos'], ['actualidad', 'Actualidad'], ['simuladores', 'Simuladores'], ['datos', 'Mis datos']]);
+  const exploreTabs = () => tabs('Vistas de Explorar', 'explore', [['retos', 'Retos'], ['cursos', 'Cursos'], ['simuladores', 'Simuladores'], ['rutas', 'Rutas'], ['actualidad', 'Actualidad'], ['datos', 'Mis datos']]);
   const formButton = (label, id) => `<button class="subtle-button" ${action('form', id)}>${icon('plus', 16)} ${label}</button>`;
   const rowLink = (label, hint, glyph, command, id) => `<button class="list-link" ${action(command, id)}><span class="badge-icon">${icon(glyph)}</span><span><strong>${escapeText(label)}</strong>${hint ? `<small>${escapeText(hint)}</small>` : ''}</span>${icon('chevron', 17)}</button>`;
 
@@ -71,7 +73,10 @@ export function createModules({ main, state, action, icon, select, heading, mont
 
   function learningView() {
     const progress = personal.learning;
-    const course = lesson => rowLink(lesson.title, progress.completed.includes(lesson.id) ? 'Completado' : levels[lesson.level], lesson.icon, 'lesson', lesson.id);
+    const course = lesson => {
+      const status = progress.completed.includes(lesson.id) ? 'Aprobado' : coinLabel(courseCoins) + ' al aprobar';
+      return rowLink(lesson.title, status, lesson.icon, 'lesson', lesson.id);
+    };
     if (state.explore === 'rutas') {
       const rank = Math.max(0, levels.indexOf(progress.level));
       const routes = [...new Set(lessons.map(lesson => lesson.route))];
@@ -79,19 +84,50 @@ export function createModules({ main, state, action, icon, select, heading, mont
     }
     if (state.explore === 'cursos') return `<section class="panel block"><div class="panel-head"><h2>Cursos</h2></div>${lessons.map(course).join('')}</section>`;
     if (state.explore === 'actualidad') return `<div class="learning-grid">${news.map((item, index) => `<article class="panel block news-card"><small>${item.source}</small><h2>${item.title}</h2><details><summary>Impacto en Perú</summary><p>${item.impact}</p>${window.LanguageModel ? `<button class="subtle-button" ${action('news-ai', index)}>Ampliar con IA</button><p class="form-feedback" role="status"></p>` : ''}</details><a href="${item.url}" target="_blank" rel="noopener">Leer informe ${icon('arrowRight', 16)}</a></article>`).join('')}</div>`;
-    if (state.explore === 'simuladores') {
-      return `<section class="panel block"><div class="panel-head"><h2>Simuladores</h2><span class="pill">Plus</span></div>
-      ${progress.plus ? Object.entries(simulations).map(([id, scenario]) => rowLink(scenario.label, '', 'trend', 'simulation', id)).join('') :
-        `<p class="empty">Prueba seis escenarios de práctica con la demo Plus.</p><button class="primary-button" ${action('plus')}>Activar demo Plus</button>`}</section>`;
-    }
+    if (state.explore === 'simuladores') return `<section class="panel block"><div class="panel-head"><h2>Simuladores</h2><span class="pill">${coinLabel(progress.coins)}</span></div>
+      ${Object.entries(simulations).map(([id, scenario]) => {
+        const { course, cost } = simulationRequirements[id];
+        const status = simulationStatus(progress, id);
+        const hint = status === 'unlocked' ? 'Desbloqueado' : status === 'course' ? `Aprueba «${courseById(course).title}» · ${coinLabel(cost)}` :
+          status === 'coins' ? `Faltan ${coinLabel(cost - progress.coins)}` : `Canjear por ${coinLabel(cost)}`;
+        return rowLink(scenario.label, hint, status === 'unlocked' ? 'trend' : 'vault', 'simulation', id);
+      }).join('')}</section>`;
+    return challengeHub(progress, course);
+  }
+
+  function challengeHub(progress, course) {
     const games = progress.generated ? [...challenges, progress.generated] : challenges;
-    const done = progress.completed.filter(id => findActivity(id)).length;
-    return `<div class="learning-grid"><section class="panel block"><div class="panel-head"><h2>Tu progreso</h2><span class="pill">${progress.coins} monedas</span></div>
-      <p class="empty">${progress.level || 'Nivel por descubrir'} · ${done}/${lessons.length + games.length} actividades</p>
-      ${rowLink('Diagnóstico', progress.level ? 'Volver a intentar' : 'Descubre tu nivel', 'compass', 'diagnostic')}
-      ${games.map(item => rowLink(item.title, progress.completed.includes(item.id) ? 'Completado' : 'Pendiente', 'spark', 'lesson', item.id)).join('')}
-      ${window.LanguageModel && !progress.generated ? `<button class="subtle-button" ${action('generate-game')}>Crear reto con IA</button><p class="form-feedback" id="game-feedback" role="status"></p>` : ''}</section>
-      <section class="panel block"><div class="panel-head"><h2>Recompensas</h2></div>${rewards.map(reward => `<div class="payment-row"><span class="badge-icon">${icon(reward.icon)}</span><strong>${reward.label}</strong><button class="subtle-button" ${action('reward', reward.id)} ${progress.badges.includes(reward.id) || progress.coins < reward.cost ? 'disabled' : ''}>${progress.badges.includes(reward.id) ? 'Canjeada' : reward.cost + ' monedas'}</button></div>`).join('')}</section></div>`;
+    const pending = lessons.filter(item => !progress.completed.includes(item.id));
+    const done = lessons.length - pending.length;
+    return `<section class="game-wallet">
+      <div><h2>Mi billetera</h2><p><strong>${progress.coins}</strong> ${progress.coins === 1 ? 'moneda' : 'monedas'}</p></div>
+      <span class="wallet-glyph">${icon('coins', 34)}</span>
+      <details class="coin-history"><summary>Historial de monedas ${icon('chevronDown', 16)}</summary>
+        ${progress.history.length ? `<ul>${[...progress.history].reverse().map(entry => `<li><span>${escapeText(entry.label)}</span><strong>${entry.change > 0 ? '+' : '−'}${Math.abs(entry.change)}</strong></li>`).join('')}</ul>` : '<p>Aquí verás las monedas ganadas y usadas.</p>'}</details>
+    </section>
+    <div class="learning-grid challenge-grid">
+      <section class="panel block"><div class="panel-head"><h2>Retos</h2><span class="pill">${progress.milestones.length}/${milestones.length} logrados</span></div>
+        ${milestones.map(item => {
+          const value = Math.min(item.target, item.progress(progress));
+          const achieved = progress.milestones.includes(item.id);
+          return `<div class="challenge-row"><span class="badge-icon">${icon(achieved ? 'check' : 'target')}</span>
+            <div><strong>${item.title}</strong><small>${item.description}</small><progress value="${value}" max="${item.target}" aria-label="${item.title}: ${value} de ${item.target}"></progress></div>
+            <span class="pill">${achieved ? 'Logrado' : '+' + item.coins}</span></div>`;
+        }).join('')}
+        <details class="game-more"><summary>Retos de práctica ${icon('chevronDown', 16)}</summary>
+          ${games.map(item => rowLink(item.title, progress.completed.includes(item.id) ? 'Completado' : '+10 monedas', 'spark', 'lesson', item.id)).join('')}
+          ${window.LanguageModel && !progress.generated ? `<button class="subtle-button" ${action('generate-game')}>Crear reto con IA</button><p class="form-feedback" id="game-feedback" role="status"></p>` : ''}
+        </details>
+      </section>
+      <section class="panel block"><div class="panel-head"><h2>Aprendizaje</h2><span class="pill">${done}/${lessons.length} cursos</span></div>
+        ${rowLink(progress.level || 'Descubre tu nivel', progress.level ? 'Repetir diagnóstico' : 'Evaluación de nivel', 'compass', 'diagnostic')}
+        <details class="game-more"><summary>Cursos pendientes ${icon('chevronDown', 16)}</summary>${pending.length ? pending.map(course).join('') : '<p class="empty">Aprobaste todos los cursos.</p>'}</details>
+      </section>
+      <section class="panel block game-rewards"><div class="panel-head"><h2>Recompensas</h2><span class="pill">${progress.unlocked.length + progress.badges.length} obtenidas</span></div>
+        ${rowLink('Simuladores', `${progress.unlocked.length}/${Object.keys(simulations).length} desbloqueados`, 'trend', 'explore', 'simuladores')}
+        <details class="game-more"><summary>Insignias ${icon('chevronDown', 16)}</summary>${rewards.map(reward => `<div class="payment-row"><span class="badge-icon">${icon(reward.icon)}</span><strong>${reward.label}</strong><button class="subtle-button" ${action('reward', reward.id)} ${progress.badges.includes(reward.id) || progress.coins < reward.cost ? 'disabled' : ''}>${progress.badges.includes(reward.id) ? 'Canjeada' : coinLabel(reward.cost)}</button></div>`).join('')}</details>
+      </section>
+    </div>`;
   }
 
   let messages = [];
@@ -103,7 +139,8 @@ export function createModules({ main, state, action, icon, select, heading, mont
       <form id="chat-form"><input name="question" type="text" aria-label="Tu consulta" placeholder="Escribe una pregunta" autocomplete="off" maxlength="240" required><button class="primary-button icon-button" aria-label="Enviar pregunta">${icon('arrowUp', 19)}</button></form>
       ${personal.learning.plus ? `<div class="voice-controls">
         ${(window.SpeechRecognition || window.webkitSpeechRecognition) ? `<button class="subtle-button" ${action('voice')}>${icon('mic', 16)} Dictar</button>` : ''}
-        ${window.speechSynthesis && messages.length ? `<button class="subtle-button" ${action('speak')}>Escuchar respuesta</button>` : ''}</div>` : ''}
+        ${window.speechSynthesis && messages.length ? `<button class="subtle-button" ${action('speak')}>Escuchar respuesta</button>` : ''}</div>` :
+        ((window.SpeechRecognition || window.webkitSpeechRecognition || window.speechSynthesis) ? `<details class="game-more"><summary>Voz en demo Plus ${icon('chevronDown', 16)}</summary><button class="subtle-button" ${action('plus')}>Activar voz</button></details>` : '')}
       <p class="chat-note">Respuestas con tus datos en este dispositivo.</p><p class="sr-only" id="voice-status" role="status"></p></section>
       <details class="forecast-disclosure" ${forecastOpen ? 'open' : ''}><summary>Ver pronóstico ${icon('chevronDown', 17)}</summary>${forecastView()}</details>`;
   }
@@ -183,8 +220,12 @@ export function createModules({ main, state, action, icon, select, heading, mont
   const centsInput = (label, name, cents = '', optional = false) => field(label, name, { value: cents === '' ? '' : (cents / 100).toFixed(2), decimal: true, optional });
   const close = () => `<form method="dialog"><button class="subtle-button icon-button" aria-label="Cerrar">${icon('close', 18)}</button></form>`;
   function openDialog(title, content) {
-    editor.innerHTML = `<div class="dialog-head"><h2 id="module-title">${title}</h2>${close()}</div>${content}`;
+    editor.innerHTML = `<div class="dialog-head"><h2 id="module-title" tabindex="-1">${title}</h2>${close()}</div>${content}`;
     if (!editor.open) editor.showModal();
+    else {
+      editor.scrollTop = 0;
+      editor.querySelector('#module-title').focus({ preventScroll: true });
+    }
   }
 
   function openForm(kind, id) {
@@ -217,27 +258,69 @@ export function createModules({ main, state, action, icon, select, heading, mont
   function openLesson(id) {
     const item = findActivity(id);
     if (!item) return;
+    if (courseById(id)) {
+      const approved = personal.learning.completed.includes(id);
+      openDialog(item.title, `<div class="module-form">
+        <p class="course-status">${approved ? 'Curso aprobado' : '+' + coinLabel(courseCoins) + ' al aprobar'}</p>
+        <p>${item.reading}</p><p class="lesson-example">${item.example}</p>
+        <a class="lesson-resource" href="https://www.sbs.gob.pe/material-de-educacion-financiera" target="_blank" rel="noopener">Material y videos de la SBS ${icon('arrowRight', 16)}</a>
+        <button class="primary-button" data-editor-action="quiz" data-value="${id}">${approved ? 'Repetir quiz' : 'Empezar quiz'}</button></div>`);
+      return;
+    }
     const answered = personal.learning.completed.includes(id);
-    const choices = item.options.map((option, index) => `<label class="answer-option"><input type="radio" name="answer" value="${index}" required> ${escapeText(option)}</label>`).join('');
     openDialog(escapeText(item.title), `<form class="module-form" data-form="lesson" data-id="${id}">
-      ${item.reading ? `<p>${item.reading}</p><p class="lesson-example">${item.example}</p><a class="lesson-resource" href="https://www.sbs.gob.pe/material-de-educacion-financiera" target="_blank" rel="noopener">Material y videos de la SBS ${icon('arrowRight', 16)}</a>` : ''}
-      <fieldset><legend>${escapeText(item.question)}</legend>${choices}</fieldset><p class="form-feedback" role="status">${answered ? 'Actividad completada' : ''}</p>
+      ${questionFields(item, 'answer')}<p class="form-feedback" role="status">${answered ? 'Actividad completada' : ''}</p>
       <button class="primary-button">Comprobar</button></form>`);
+  }
+
+  function questionFields(item, name) {
+    return `<fieldset><legend>${escapeText(item.question)}</legend>${item.options.map((option, index) =>
+      `<label class="answer-option"><input type="radio" name="${name}" value="${index}" required> ${escapeText(option)}</label>`).join('')}</fieldset>`;
+  }
+
+  function openQuiz(id) {
+    const course = courseById(id);
+    const quiz = quizFor(course);
+    openDialog(course.title, `<form class="module-form" data-form="quiz" data-id="${id}">
+      <p class="course-status">Quiz final · Aprueba con ${passingScore} de ${quiz.length}</p>
+      ${quiz.map((item, i) => questionFields(item, 'q' + i)).join('')}
+      <p class="form-feedback" role="alert"></p><button class="primary-button">Ver resultado</button></form>`);
   }
 
   function openDiagnostic() {
     openDialog('Descubre tu nivel', `<form class="module-form" data-form="diagnostic">${[lessons[0], lessons[2], lessons[3]].map((item, i) =>
-      `<fieldset><legend>${item.question}</legend>${item.options.map((option, j) => `<label class="answer-option"><input type="radio" name="q${i}" value="${j}" required> ${option}</label>`).join('')}</fieldset>`).join('')}
+      questionFields(item, 'q' + i)).join('')}
       <p class="form-feedback" role="alert"></p><button class="primary-button">Ver mi nivel</button></form>`);
   }
 
   function openSimulation(id) {
     const scenario = simulations[id];
-    if (!personal.learning.plus || !scenario) return;
+    if (!scenario || simulationStatus(personal.learning, id) !== 'unlocked') return;
     openDialog(scenario.label, `<form class="module-form" data-form="simulation" data-id="${id}">${scenario.fields.map(([label, value], index) =>
       `<label class="form-field">${label}<input type="number" inputmode="decimal" min="${index === 2 && ['prestamo', 'tarjeta', 'inversiones'].includes(id) ? 1 : 0}" max="${index === 2 && ['prestamo', 'tarjeta', 'inversiones'].includes(id) ? 360 : 10000000}" step="${index === 2 && id !== 'presupuesto' ? 1 : .01}" name="n${index}" value="${value}" required></label>`).join('')}
       <div class="simulation-result"><span>${scenario.result}</span><output aria-live="polite"></output></div>${scenario.note ? `<p class="chat-note">${scenario.note}</p>` : ''}</form>`);
     updateSimulation(editor.querySelector('form[data-form]'));
+  }
+
+  function chooseSimulation(id) {
+    const status = simulationStatus(personal.learning, id);
+    const { course, cost } = simulationRequirements[id];
+    const title = simulations[id].label;
+    if (status === 'unlocked') { openSimulation(id); return; }
+    if (status === 'course') {
+      const item = courseById(course);
+      openDialog(title, `<div class="module-form"><p>Aprueba «${item.title}» y reúne ${coinLabel(cost)} para desbloquear este simulador.</p>
+        <button class="primary-button" data-editor-action="course" data-value="${course}">Ver curso</button></div>`);
+      return;
+    }
+    if (status === 'coins') {
+      openDialog(title, `<div class="module-form"><p>Curso aprobado. Te faltan ${coinLabel(cost - personal.learning.coins)} para desbloquear el simulador.</p>
+        <button class="primary-button" data-editor-action="retos">Ver retos</button></div>`);
+      return;
+    }
+    openDialog('Desbloquear ' + title.toLowerCase(), `<form class="module-form" data-form="redeem" data-id="${id}">
+      <p>Usarás <strong>${coinLabel(cost)}</strong>. Te quedarán ${coinLabel(personal.learning.coins - cost)}.</p>
+      <p class="form-feedback" role="alert"></p><button class="primary-button" type="submit">Confirmar canje</button></form>`);
   }
 
   function updateSimulation(form) {
@@ -303,15 +386,11 @@ export function createModules({ main, state, action, icon, select, heading, mont
         case 'generate-game': void generateGame(); break;
         case 'news-ai': void explainNews(Number(value)); break;
         case 'diagnostic': openDiagnostic(); break;
-        case 'simulation': openSimulation(value); break;
+        case 'simulation': chooseSimulation(value); break;
         case 'plus': updatePersonal(data => { data.learning.plus = true; }); render(); break;
         case 'reward': {
           const reward = rewards.find(item => item.id === value);
-          updatePersonal(({ learning }) => {
-            if (learning.badges.includes(value) || learning.coins < reward.cost) return;
-            learning.coins -= reward.cost;
-            learning.badges.push(value);
-          });
+          updatePersonal(({ learning }) => redeemBadge(learning, reward));
           render(); break;
         }
         case 'prompt': send(prompts[Number(value)]); break;
@@ -362,20 +441,38 @@ export function createModules({ main, state, action, icon, select, heading, mont
     const values = Object.fromEntries(new FormData(form));
     const feedback = form.querySelector('.form-feedback:not(#receipt-status)');
     try {
+      if (kind === 'quiz') {
+        const course = courseById(id);
+        let result;
+        updatePersonal(({ learning }) => {
+          result = gradeCourse(learning, course, quizFor(course).map((_, i) => Number(values['q' + i])));
+        });
+        const status = result.passed ? 'Curso aprobado' : 'Refuerza el contenido';
+        const detail = result.earned ? `<p class="coin-earned">+${coinLabel(result.earned)} en tu billetera</p>` :
+          (result.passed ? '<p>Ya recibiste la recompensa de este curso.</p>' : '<p>Repasa la lección y vuelve a intentarlo.</p>');
+        openDialog('Resultado del quiz', `<div class="module-form quiz-result" role="status"><strong>${result.score}/${result.total}</strong><h3>${status}</h3>${detail}</div>
+          <button class="primary-button quiz-result-action" data-editor-action="${result.passed ? 'retos' : 'course'}" data-value="${id}">${result.passed ? 'Ir a Retos' : 'Repasar lección'}</button>`);
+        render();
+        return;
+      }
+      if (kind === 'redeem') {
+        updatePersonal(({ learning }) => {
+          if (!redeemSimulation(learning, id)) throw new Error('El canje ya no está disponible. Revisa tu saldo y los cursos aprobados.');
+        });
+        openDialog('Simulador desbloqueado', `<div class="module-form"><p role="status">Canjeaste ${coinLabel(simulationRequirements[id].cost)}. Saldo: ${coinLabel(personal.learning.coins)}.</p>
+          <button class="primary-button" data-editor-action="simulation" data-value="${id}">Abrir simulador</button></div>`);
+        render();
+        return;
+      }
       if (kind === 'lesson') {
         const item = findActivity(id);
         if (Number(values.answer) !== item.answer) {
           feedback.textContent = 'Prueba otra respuesta.';
           return;
         }
-        let earned = false;
-        updatePersonal(({ learning }) => {
-          if (learning.completed.includes(id)) return;
-          learning.completed.push(id);
-          learning.coins += 10;
-          earned = true;
-        });
-        feedback.textContent = (earned ? '+10 monedas. ' : 'Respuesta correcta. ') + item.example;
+        let earned;
+        updatePersonal(({ learning }) => { earned = completeChallenge(learning, item); });
+        feedback.textContent = (earned ? '+' + coinLabel(earned) + '. ' : 'Respuesta correcta. ') + item.example;
         render();
         return;
       }
@@ -444,7 +541,20 @@ export function createModules({ main, state, action, icon, select, heading, mont
       await worker?.terminate();
     }
   });
-  editor.addEventListener('click', event => { if (event.target === editor) editor.close(); });
+  editor.addEventListener('click', event => {
+    if (event.target === editor) { editor.close(); return; }
+    const control = event.target.closest('[data-editor-action]');
+    if (!control) return;
+    const { editorAction, value } = control.dataset;
+    if (editorAction === 'quiz') openQuiz(value);
+    if (editorAction === 'course') openLesson(value);
+    if (editorAction === 'simulation') openSimulation(value);
+    if (editorAction === 'retos') {
+      editor.close();
+      state.explore = 'retos';
+      render({ focus: '[data-action="explore"][data-value="retos"]' });
+    }
+  });
 
   return { organizeTabs, exploreTabs, savingsPanel, upcomingPanel, calendarView, goalsView, learningView, assistantView, handleAction };
 }

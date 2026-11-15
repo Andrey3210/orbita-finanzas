@@ -2,21 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { accounts, balances, byDay, compareDay, daily, groups, latest, monthMovements, portfolio, previous, predictNextMonth, routes, sum, totals } from '../assets/model.js';
 
-test('el pico de octubre conserva el total y permite identificar el alquiler', () => {
+test('el pico de octubre conserva el total y permite identificar los materiales del proyecto', () => {
   const values = daily(latest);
-  assert.equal(Math.max(...values), 148000);
-  assert.equal(values.indexOf(148000) + 1, 15);
+  assert.equal(Math.max(...values), 18100);
+  assert.equal(values.indexOf(18100) + 1, 15);
   const [top] = groups(byDay(latest, 15));
-  assert.equal(top.category, 'hogar');
-  assert.equal(top.cents, 127000);
-  assert.equal(top.items.find(m => m.label === 'Alquiler · Miraflores').cents, 115000);
+  assert.equal(top.category, 'estudios');
+  assert.equal(top.cents, 16300);
+  assert.equal(top.items.find(m => m.label === 'Materiales del proyecto de ciclo').cents, 14500);
 });
 
 test('la diferencia del día 15 se descompone sin perder céntimos', () => {
   const d = compareDay(latest, previous, 15);
-  assert.equal(d.delta, 95100);
+  assert.equal(d.delta, 11900);
   assert.equal(d.diffs.reduce((n, g) => n + g.delta, 0), d.delta);
-  assert.deepEqual(d.diffs[0], { category: 'hogar', delta: 84000 });
+  assert.deepEqual(d.diffs[0], { category: 'estudios', delta: 11100 });
   assert.equal(compareDay(latest, previous, 31), null);
 });
 
@@ -27,7 +27,7 @@ test('una transferencia debita un origen y abona un destino sin afectar la carte
     const transfersIn = monthMovements(latest).filter(m => m.to === a.id);
     assert.equal(oct[a.id], sept[a.id] + sum(own.filter(m => m.kind === 'income')) - sum(own.filter(m => m.kind !== 'income')) + sum(transfersIn));
   }
-  assert.equal(t.transfer, 100000);
+  assert.equal(t.transfer, 12500);
   assert.equal(portfolio(latest) - portfolio(previous), t.income - t.expense);
   assert.equal(sum(routes(latest)), t.expense);
 });
@@ -41,7 +41,7 @@ test('el pronóstico usa el saldo de octubre y pondera el historial sin contar t
   assert.equal(report.income, estimate('income'));
   assert.equal(report.expense, estimate('expense'));
   assert.equal(report.closing, report.opening + report.income - report.expense);
-  assert.deepEqual(report.series.at(-1), { day: 30, balance: 1077775 });
+  assert.deepEqual(report.series.at(-1), { day: 30, balance: 32254 });
   // October 31 is folded into the last day of November, which has 30 days.
   const end = sum([...byDay(latest, 30), ...byDay(latest, 31)]);
   const expected = Math.round((sum(byDay(previous, 30)) + 2 * end) / 3);

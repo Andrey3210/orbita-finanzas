@@ -4,9 +4,9 @@ Prototipo web en español para organizar tus finanzas, explorar gastos y practic
 
 ## Cómo probarlo
 
-- **Inicio.** Toca el pico del 15 de octubre, abre Hogar y consulta el alquiler de S/ 1,150.00. «Comparar» abre el mismo día en septiembre. «Más categorías» y «Resumen completo» amplían el detalle.
+- **Inicio.** El historial inicial cierra en S/ 393.60. Toca el pico del 15 de octubre y abre Estudios para consultar los materiales del proyecto de S/ 145.00. «Comparar» abre el mismo día en septiembre. «Más categorías» y «Resumen completo» amplían el detalle.
 - **Organízate.** Agrega o renombra cuentas, registra ingresos, gastos o transferencias y filtra el historial por fecha, cuenta, tipo y motivo. En Calendario puedes programar pagos y marcarlos como realizados. El botón flotante escanea una foto en el navegador y permite revisar los campos antes de guardar. La primera descarga del motor de reconocimiento requiere conexión.
-- **Explorar.** Abre rutas, cursos, diagnóstico, retos, recompensas y enlaces de actualidad. «Mis datos» agrupa las gráficas, comparaciones y el flujo de gastos. La demo Plus abre seis calculadoras educativas.
+- **Explorar.** Retos reúne la billetera e historial de monedas, el nivel, el progreso, los cursos pendientes y las recompensas. Cada curso entrega 20 monedas la primera vez que apruebas su quiz con al menos 2 de 3 aciertos. Los retos pueden sumar más. Cada simulador exige aprobar el curso asociado y confirmar el canje. «Mis datos» agrupa las gráficas, comparaciones y el flujo de gastos.
 - **Metas.** Registra el objetivo, el monto acumulado y la fecha. Al reservar el ahorro, el saldo disponible disminuye y el saldo total conserva el monto.
 - **Asistente.** Consulta el saldo, gastos, ingresos, pagos o metas. El pronóstico se abre al pie del chat y usa los dos últimos periodos con doble peso para el más reciente. Las consultas de texto abiertas y la generación de retos usan la IA local de navegadores compatibles con un modelo disponible. La demo Plus ofrece dictado y lectura en los navegadores que soportan esas funciones.
 

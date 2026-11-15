@@ -1,4 +1,5 @@
-import { accounts, balances, categories, loadLedger, newestMonth } from './model.js?v=miluka-1';
+import { accounts, balances, categories, loadLedger, newestMonth } from './model.js?v=miluka-2';
+import { restoreLearning } from './learning.js?v=miluka-2';
 
 const key = 'miluka.finanzas.v1';
 export function localDate(date = new Date()) {
@@ -14,21 +15,25 @@ function dueIn(days) {
 const initial = {
   accounts: [], movements: [],
   payments: [
-    { id: 'internet', label: 'Internet', date: dueIn(2), cents: 12400, paid: false },
-    { id: 'movil', label: 'Plan móvil', date: dueIn(8), cents: 6400, paid: false },
+    { id: 'internet', label: 'Parte del internet', date: dueIn(2), cents: 3500, paid: false },
+    { id: 'movil', label: 'Recarga del celular', date: dueIn(8), cents: 2400, paid: false },
   ],
   goals: [
-    { id: 'laptop', label: 'Mi próxima laptop', target: 220000, saved: 54000, reserved: false, account: 'ahorros', date: '' },
+    { id: 'laptop', label: 'Mi próxima laptop', target: 150000, saved: 9000, reserved: false, account: 'ahorros', date: '' },
   ],
   learning: { completed: [], level: '', coins: 0, badges: [] },
 };
 
 function read() {
+  let data;
   try {
-    return JSON.parse(localStorage.getItem(key)) ?? structuredClone(initial);
+    data = JSON.parse(localStorage.getItem(key));
   } catch {
-    return structuredClone(initial);
+    data = null;
   }
+  data ??= structuredClone(initial);
+  restoreLearning(data.learning);
+  return data;
 }
 
 export let personal = read();

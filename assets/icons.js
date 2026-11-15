@@ -33,5 +33,6 @@ const glyphs = {
   scan: '<path d="M8 4H6a2 2 0 0 0-2 2v2m12-4h2a2 2 0 0 1 2 2v2M4 16v2a2 2 0 0 0 2 2h2m8 0h2a2 2 0 0 0 2-2v-2M3 12h18m-12 3h6m-6 3h4"/>',
   mic: '<rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3m-3 0h6"/>',
   edit: '<path d="m15 5 4 4M4 20l1-5L16 4a2 2 0 0 1 4 4L9 19z"/>',
+  coins: '<circle cx="9" cy="9" r="6"/><path d="M15 8.1a6.5 6.5 0 1 1-6.9 6.9M9 6.5 11.5 9 9 11.5 6.5 9z"/>',
 };
 export const icon = (name, size = 20) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${glyphs[name] ?? glyphs.spark}</svg>`;
